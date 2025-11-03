@@ -1,0 +1,12 @@
+[package]
+name = "core"
+description = "Core business logic library for Notification Service"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[lib]
+name = "core"
+path = "src/lib.rs"
+
+[dependencies]
