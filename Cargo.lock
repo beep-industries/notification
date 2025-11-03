@@ -89,6 +89,7 @@ name = "beep-config"
 version = "0.1.0"
 
 [[package]]
+<<<<<<< HEAD
 name = "bindgen"
 version = "0.72.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -115,6 +116,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "812e12b5285cc515a9c72a5c1d3b6d46a19dac5acfef5265968c166106e31dd3"
 
 [[package]]
+=======
+>>>>>>> b1f0bc3 (feat: Add core domain entities and websocket session)
 name = "bumpalo"
 version = "3.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -139,6 +142,7 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "cexpr"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -148,6 +152,8 @@ dependencies = [
 ]
 
 [[package]]
+=======
+>>>>>>> b1f0bc3 (feat: Add core domain entities and websocket session)
 name = "cfg-if"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1593,7 +1599,11 @@ version = "1.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2f87b8aa10b915a06587d0dec516c282ff295b475d94abf425d62b57710070a2"
 dependencies = [
+<<<<<<< HEAD
  "getrandom 0.3.4",
+=======
+ "getrandom",
+>>>>>>> b1f0bc3 (feat: Add core domain entities and websocket session)
  "js-sys",
  "serde",
  "wasm-bindgen",
@@ -1745,6 +1755,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
 
 [[package]]
+<<<<<<< HEAD
 name = "windows-registry"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1765,11 +1776,14 @@ dependencies = [
 ]
 
 [[package]]
+=======
+>>>>>>> b1f0bc3 (feat: Add core domain entities and websocket session)
 name = "windows-result"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7781fa89eaf60850ac3d2da7af8e5242a5ea78d1a11c49bf2910bb5a73853eb5"
 dependencies = [
+<<<<<<< HEAD
  "windows-link 0.2.1",
 ]
 
@@ -1780,6 +1794,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56e6c93f3a0c3b36176cb1327a4958a0353d5d166c2a35cb268ace15e91d3b57"
 dependencies = [
  "windows-link 0.1.3",
+=======
+ "windows-link",
+>>>>>>> b1f0bc3 (feat: Add core domain entities and websocket session)
 ]
 
 [[package]]
@@ -1952,6 +1969,7 @@ name = "wit-bindgen"
 version = "0.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f17a85883d4e6d00e8a97c586de764dabcc06133f7f1d55dce5cdc070ad7fe59"
+<<<<<<< HEAD
 
 [[package]]
 name = "writeable"
@@ -2041,3 +2059,5 @@ dependencies = [
  "quote",
  "syn",
 ]
+=======
+>>>>>>> b1f0bc3 (feat: Add core domain entities and websocket session)
