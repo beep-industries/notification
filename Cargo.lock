@@ -194,6 +194,8 @@ dependencies = [
  "beep-auth",
  "chrono",
  "serde",
+ "serde_json",
+ "thiserror",
  "uuid",
 ]
 
