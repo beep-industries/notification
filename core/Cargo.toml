@@ -10,3 +10,7 @@ name = "core"
 path = "src/lib.rs"
 
 [dependencies]
+chrono = { version = "0.4.42", features = ["serde"] }
+serde = "1.0.228"
+uuid = { version = "1.18.1", features = ["serde", "v7"] }
+beep-auth = { git = "https://github.com/beep-industries/crates" }
