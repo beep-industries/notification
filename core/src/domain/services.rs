@@ -9,6 +9,7 @@ pub fn generate_id() -> Uuid {
     Uuid::new_v7(timestamp)
 }
 
+#[derive(Clone)]
 pub struct Service<A>
 where
     A: AuthRepository,
