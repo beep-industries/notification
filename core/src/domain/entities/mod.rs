@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::Utc;
-use uuid::{NoContext, Timestamp, Uuid};
 
 pub mod events;
 pub mod notification;
