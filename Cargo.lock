@@ -195,9 +195,13 @@ dependencies = [
  "chrono",
  "serde",
 <<<<<<< HEAD
+<<<<<<< HEAD
  "serde_json",
 =======
 >>>>>>> fe2f865 (feat: Introduce ID generation and domain ports)
+=======
+ "serde_json",
+>>>>>>> 57f1a84 (feat: add notification entity and serde derives)
  "thiserror",
  "uuid",
 ]
