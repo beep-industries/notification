@@ -194,7 +194,10 @@ dependencies = [
  "beep-auth",
  "chrono",
  "serde",
+<<<<<<< HEAD
  "serde_json",
+=======
+>>>>>>> fe2f865 (feat: Introduce ID generation and domain ports)
  "thiserror",
  "uuid",
 ]
