@@ -1,10 +1,14 @@
 use chrono::{DateTime, Utc};
 
-use crate::domain::entities::{ChannelId, UserId};
+use crate::domain::{
+    entities::{ChannelId, NotificationId, UserId},
+    services::generate_id,
+};
 
 #[derive(Debug, Clone)]
 #[allow(unused)]
 pub struct NotificationPreference {
+    pub id: NotificationId,
     pub user_id: UserId,
     pub channel_id: ChannelId,
     pub enabled: bool,
@@ -14,7 +18,9 @@ pub struct NotificationPreference {
 #[allow(unused)]
 impl NotificationPreference {
     pub fn new(user_id: UserId, channel_id: ChannelId) -> Self {
+        let id = generate_id();
         Self {
+            id: id.into(),
             user_id,
             channel_id,
             enabled: true,
