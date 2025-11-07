@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use crate::domain::entities::{ChannelId, UserId};
 
 #[derive(Debug, Clone)]
+#[allow(unused)]
 pub struct NotificationPreference {
     pub user_id: UserId,
     pub channel_id: ChannelId,
@@ -10,6 +11,7 @@ pub struct NotificationPreference {
     pub muted_until: Option<DateTime<Utc>>,
 }
 
+#[allow(unused)]
 impl NotificationPreference {
     pub fn new(user_id: UserId, channel_id: ChannelId) -> Self {
         Self {
