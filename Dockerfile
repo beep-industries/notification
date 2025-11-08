@@ -20,7 +20,11 @@ COPY api api
 COPY core core
 COPY libs/config libs/config
 
-RUN cargo build --release
+RUN \
+    touch api/src/main.rs && \
+    touch core/src/lib.rs && \
+    touch libs/config/src/lib.rs && \
+    cargo build --release
 
 FROM debian:bookworm-slim AS runtime
 
