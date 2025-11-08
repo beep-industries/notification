@@ -11,6 +11,9 @@ pub mod services;
 pub enum CoreError {
     #[error("Preference with id {id} not found")]
     PreferenceNotFound { id: PreferenceId },
+
+    #[error("Insert notification failed: {message}")]
+    FailedInsertNotification { message: String },
 }
 
 pub struct Config {

@@ -5,7 +5,7 @@ pub mod events;
 pub mod notification;
 pub mod preference;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct UserId(pub Uuid);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -44,5 +44,23 @@ impl From<Uuid> for ChannelId {
 impl From<Uuid> for UserId {
     fn from(uuid: Uuid) -> Self {
         UserId(uuid)
+    }
+}
+
+impl From<UserId> for Uuid {
+    fn from(user_id: UserId) -> Self {
+        user_id.0
+    }
+}
+
+impl From<ChannelId> for Uuid {
+    fn from(channel_id: ChannelId) -> Self {
+        channel_id.0
+    }
+}
+
+impl From<NotificationId> for Uuid {
+    fn from(notification_id: NotificationId) -> Self {
+        notification_id.0
     }
 }
