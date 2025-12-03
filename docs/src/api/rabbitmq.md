@@ -26,6 +26,9 @@ binding: messages.created
     "sourceService": "messages",
     "eventType": "messages.created",
     "data": {
+        "messageContext": "dm",
+        "serverId": null,
+        "channelId": "ch-123",
         "messageId": "msg-123",
         "senderId": "user-456",
         "recipientId": "user-789",
@@ -38,13 +41,13 @@ binding: messages.created
 **Notification Behavior:**
 - **DM Context:** Check user notification settings + DND status
   - If DND enabled → No notification (silent update to inbox)
-  - If notifications disabled for DMs → No notification
-  - If notifications enabled → Badge + optional sound/desktop popup
+  - If notifications disabled for DMs → No notification (silent update to inbox)
+  - If notifications enabled → Update inbox + Badge + sound + popup
 - **Server Context:** Check server/channel settings + DND status
   - If DND enabled → No notification (silent update to inbox)
-  - If "All Messages" → Badge + sound + desktop popup
+  - If "All Messages" → Update inbox + Badge + sound + popup
   - If "@Mentions Only" → No notification (just badge)
-  - If "Muted" → No notification (just update counter)
+  - If "Muted" → No notification (update inbox + increment unread message counter only)
 
 ### ConsumeMessageUpdated
 
@@ -115,18 +118,17 @@ exchange name and type: messages.events of type Topic
 binding: messages.mention.added
 ```
 
-**Purpose:** When a user is mentioned (@username) in a message, send a HIGH PRIORITY notification to the mentioned user(s), overriding most settings but respecting DND.
+**Purpose:** When a user is mentioned (@username) in a message, send a  notification to the mentioned user(s), overriding most settings but respecting DND.
 
 **Context:** Can be in a DM or a server message.
 
 **Notification Behavior:**
-- **DND Enabled:** NO notification (silent, but mark as unread with mention indicator)
+- **DND Enabled:** NO notification (update inbox, update badge)
 - **DND Disabled:**
-  - Desktop popup (highest priority)
-  - Sound alert (always plays)
+  - Popup
+  - Sound
   - Badge with mention highlight
   - Even if channel/server is muted, mention notification plays
-
 
 **Message Schema:**
 
@@ -136,6 +138,9 @@ binding: messages.mention.added
     "sourceService": "messages",
     "eventType": "messages.mention.added",
     "data": {
+        "messageContext": "server",
+        "serverId": "srv-001",
+        "channelId": "ch-001",
         "messageId": "msg-123",
         "authorId": "user-456",
         "mentionedUserIds": ["user-789", "user-999"],
@@ -188,6 +193,12 @@ binding: friends.request.sent
 
 **Purpose**: When a friend request is created in the Friend service, send a notification to the recipient.
 
+**Notification Behavior:**
+- **DND Enabled** → No notification (silent update + update inbox)
+- **DND Disabled:**
+  - If friend request notifications enabled → update inbox + sound + popup
+  - If disabled → update inbox + Silent update only
+
 **Message Schema:**
 ```
 {
@@ -207,14 +218,14 @@ binding: friends.request.sent
 ### ConsumeFriendsRequestAccepted
 
 ```
-queue: notifications:friends.request.accepted
+queue: notifications.friends.request.accepted
 exchange name and type: friends.events of type Topic
 binding: friends.request.accepted
 ```
 
 **Purpose**: When a friend request is accepted in the Friend service, send a notification to the sender.
 
-***Message Schema:**
+**Message Schema:**
 ```
 {
     "eventId": "evt-fr-001",
@@ -233,14 +244,14 @@ binding: friends.request.accepted
 ### ConsumeFriendsRequestCanceled
 
 ```
-queue: notifications:friends.request.canceled
+queue: notifications.friends.request.canceled
 exchange name and type: friends.events of type Topic
 binding: friends.request.canceled
 ```
 
 **Purpose**: When a friend request is canceled in the Friend service, update the inbox, WITHOUT notifying the user.
 
-***Message Schema:**
+**Message Schema:**
 ```
 {
     "eventId": "evt-fr-001",
@@ -251,7 +262,7 @@ binding: friends.request.canceled
         "requestId": "fr-req-001",
         "senderId": "user-456",
         "recipientId": "user-789",
-        "cancelededAt": 1733238721000
+        "canceledAt": 1733238721000
     }
 }
 ```
