@@ -7,6 +7,7 @@ use crate::domain::{
     ports::notification::NotificationRepository,
 };
 
+#[derive(Clone)]
 pub struct PostgresNotificationRepository {
     pool: PgPool,
 }

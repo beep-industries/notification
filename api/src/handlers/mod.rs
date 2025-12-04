@@ -19,3 +19,7 @@ pub async fn hello(
         username: Some(identity.username().to_string()),
     }))
 }
+
+pub async fn get_notifications() -> Result<Response<String>, ApiError> {
+    Ok(Response::OK("List of notifications".to_string()))
+}

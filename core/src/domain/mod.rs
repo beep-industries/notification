@@ -9,6 +9,9 @@ pub mod services;
 
 #[derive(Debug, Error)]
 pub enum CoreError {
+    #[error("Service unavailable: {service}")]
+    ServiceUnavailable { service: String },
+
     #[error("Preference with id {id} not found")]
     PreferenceNotFound { id: PreferenceId },
 
@@ -18,4 +21,9 @@ pub enum CoreError {
 
 pub struct Config {
     pub auth: AuthConfig,
+    pub database: DatabaseConfig,
+}
+
+pub struct DatabaseConfig {
+    pub database_url: String,
 }
