@@ -1,5 +1,5 @@
 use core::{
-    application::{BeepService, create_service},
+    application::{create_service, services::ApplicationService},
     domain::Config,
 };
 use std::sync::Arc;
@@ -11,7 +11,7 @@ use crate::args::Args;
 #[derive(Clone)]
 pub struct AppState {
     pub args: Arc<Args>,
-    pub service: BeepService,
+    pub service: ApplicationService,
 }
 
 pub async fn state(args: Arc<Args>) -> Result<AppState, ApiError> {

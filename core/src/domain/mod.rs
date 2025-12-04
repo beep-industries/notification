@@ -6,6 +6,7 @@ use crate::domain::entities::PreferenceId;
 pub mod entities;
 pub mod ports;
 pub mod services;
+pub mod notification;
 
 #[derive(Debug, Error)]
 pub enum CoreError {
