@@ -27,3 +27,12 @@ pub async fn get_notifications_for_user(
 ) -> Result<Vec<Notification>, CoreError>{
     service.notification_service.get_notifications_for_user(identity, user_id).await
 }
+
+pub async fn mark_notification_as_read(
+    service: &ApplicationService,
+    identity: Identity,
+    user_id: String,
+    notification_id: String,
+) -> Result<(), CoreError> {
+    service.notification_service.mark_notification_as_read(identity, user_id, notification_id).await
+}

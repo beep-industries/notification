@@ -5,7 +5,10 @@ use uuid::Uuid;
 
 use crate::domain::{
     CoreError,
-    entities::{UserId, notification::{InsertNotificationInput, Notification}},
+    entities::{
+        UserId,
+        notification::{InsertNotificationInput, Notification},
+    },
     ports::notification::NotificationRepository,
 };
 
@@ -52,8 +55,10 @@ impl NotificationRepository for PostgresNotificationRepository {
         Ok(notification)
     }
 
-    async fn get_notifications_for_user(&self, user_id: UserId) -> Result<Vec<Notification>, CoreError> {
-
+    async fn get_notifications_for_user(
+        &self,
+        user_id: UserId,
+    ) -> Result<Vec<Notification>, CoreError> {
         let user_id: Uuid = user_id.into();
 
         let records = sqlx::query!(
@@ -70,8 +75,9 @@ impl NotificationRepository for PostgresNotificationRepository {
             message: e.to_string(),
         })?;
 
-        let notifications = records.into_iter().map(|record| {
-            Notification {
+        let notifications = records
+            .into_iter()
+            .map(|record| Notification {
                 id: record.id.into(),
                 channel_id: record.channel_id.into(),
                 user_id: record.user_id.into(),
@@ -83,9 +89,41 @@ impl NotificationRepository for PostgresNotificationRepository {
                 metadata: record.metadata,
                 sent_at: record.sent_at,
                 read_at: None,
-            }
-        }).collect();
+            })
+            .collect();
 
         Ok(notifications)
+    }
+
+    async fn mark_notification_as_read(
+        &self,
+        user_id: UserId,
+        notification_id: crate::domain::entities::NotificationId,
+    ) -> Result<(), CoreError> {
+        let user_id: Uuid = user_id.into();
+        let notification_id: Uuid = notification_id.into();
+
+        let result = sqlx::query!(
+            r#"
+            UPDATE notifications
+            SET status = 'Read', read_at = NOW()
+            WHERE id = $1 AND user_id = $2
+            "#,
+            notification_id,
+            user_id,
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| CoreError::FailedMarkNotificationAsRead {
+            message: e.to_string(),
+        })?;
+
+        if result.rows_affected() == 0 {
+            return Err(CoreError::FailedMarkNotificationAsRead {
+                message: "notification not found".to_string(),
+            });
+        }
+
+        Ok(())
     }
 }

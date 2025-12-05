@@ -22,6 +22,9 @@ pub enum CoreError {
     #[error("Get notification failed: {message}")]
     FailedGetNotification { message: String },
 
+    #[error("Mark notification as read failed: {message}")]
+    FailedMarkNotificationAsRead { message: String },
+
     #[error("Unauthorized")]
     Unauthorized,
 }

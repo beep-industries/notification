@@ -11,6 +11,7 @@ impl From<CoreError> for ApiError {
             CoreError::ServiceUnavailable { service } => Self::Unknown { message: service },
             CoreError::Unauthorized => Self::Unknown { message: "unauthorized access".to_string() },
             CoreError::PreferenceNotFound { id } => Self::Unknown { message: id.to_string() },
+            CoreError::FailedMarkNotificationAsRead { message } => Self::Unknown { message },
         }
     }
 }

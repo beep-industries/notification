@@ -1,6 +1,12 @@
-use core::{application::services::get_notifications_for_user, domain::entities::notification::Notification};
+use core::{
+    application::services::{get_notifications_for_user, mark_notification_as_read},
+    domain::entities::notification::Notification,
+};
 
-use axum::{Extension, extract::{Path, State}};
+use axum::{
+    Extension,
+    extract::{Path, State},
+};
 use beep_auth::domain::models::Identity;
 use beep_server::{ApiError, http::response::Response};
 use serde::Serialize;
@@ -35,5 +41,16 @@ pub async fn get_notifications(
     State(state): State<AppState>,
 ) -> Result<Response<NotificationResponse>, ApiError> {
     let resp = get_notifications_for_user(&state.service, identity, &user_id).await?;
-    Ok(Response::OK(NotificationResponse { notifications: resp }))
+    Ok(Response::OK(NotificationResponse {
+        notifications: resp,
+    }))
+}
+
+pub async fn read_notification(
+    Path((user_id, notification_id)): Path<(String, String)>,
+    Extension(identity): Extension<Identity>,
+    State(state): State<AppState>,
+) -> Result<Response<()>, ApiError> {
+    mark_notification_as_read(&state.service, identity, user_id, notification_id).await?;
+    Ok(Response::Accepted(()))
 }
