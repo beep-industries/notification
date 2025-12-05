@@ -4,7 +4,7 @@ use axum::{
     http::StatusCode,
     middleware::{Next, from_fn_with_state},
     response::Response,
-    routing::get,
+    routing::{get, patch, post},
 };
 use beep_server::{ApiError, http::auth_middleware};
 use tracing::info_span;
@@ -29,6 +29,10 @@ pub fn router(state: AppState) -> Result<Router, ApiError> {
     let router = Router::new()
         .route("/", get(hello))
         .route("/users/{user_id}/notifications", get(get_notifications))
+        // .route("/users/{userId}/notifications/{notificationId}/read", patch(read_notification))
+        // .route("/users/{userId}/notifications/read", post(read_notifications))
+        // .route("/users/{userId}/notifications/preferences", get(get_notification_preferences))
+        // .route("/users/{userId}/notifications/preferences", patch(update_notification_preferences))
         .layer(trace_layer)
         .layer(from_fn_with_state(state.clone(), service_auth_middleware))
         .with_state(state);
