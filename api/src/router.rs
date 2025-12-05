@@ -9,7 +9,7 @@ use axum::{
 use beep_server::{ApiError, http::auth_middleware};
 use tracing::info_span;
 
-use crate::{handlers::{get_notifications, hello, read_notification}, state::AppState};
+use crate::{handlers::{get_notifications, hello, read_notification, read_notifications}, state::AppState};
 
 async fn service_auth_middleware(
     State(state): State<AppState>,
@@ -30,7 +30,7 @@ pub fn router(state: AppState) -> Result<Router, ApiError> {
         .route("/", get(hello))
         .route("/users/{user_id}/notifications", get(get_notifications))
         .route("/users/{user_id}/notifications/{notification_id}/read", patch(read_notification))
-        // .route("/users/{userId}/notifications/read", post(read_notifications))
+        .route("/users/{user_id}/notifications/read", post(read_notifications))
         // .route("/users/{userId}/notifications/preferences", get(get_notification_preferences))
         // .route("/users/{userId}/notifications/preferences", patch(update_notification_preferences))
         .layer(trace_layer)

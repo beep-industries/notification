@@ -1,5 +1,5 @@
 use core::{
-    application::services::{get_notifications_for_user, mark_notification_as_read},
+    application::{http::ValidateJson, services::{get_notifications_for_user, mark_notification_as_read}},
     domain::entities::notification::Notification,
 };
 
@@ -9,7 +9,8 @@ use axum::{
 };
 use beep_auth::domain::models::Identity;
 use beep_server::{ApiError, http::response::Response};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use validator::Validate;
 
 use crate::state::AppState;
 
@@ -23,6 +24,12 @@ pub struct HelloResponse {
 #[derive(Serialize, PartialEq)]
 pub struct NotificationResponse {
     pub notifications: Vec<Notification>,
+}
+
+#[derive(Validate, Deserialize)]
+pub struct ReadNotificationsInput {
+    #[validate(length(min = 1, message = "ids cannot be empty"))]
+    pub notification_ids: Vec<String>,
 }
 
 pub async fn hello(
@@ -52,5 +59,19 @@ pub async fn read_notification(
     State(state): State<AppState>,
 ) -> Result<Response<()>, ApiError> {
     mark_notification_as_read(&state.service, identity, user_id, notification_id).await?;
+    Ok(Response::Accepted(()))
+}
+
+#[axum::debug_handler]
+pub async fn read_notifications(
+    Path(user_id): Path<String>,
+    Extension(identity): Extension<Identity>,
+    State(state): State<AppState>,
+    ValidateJson(payload): ValidateJson<ReadNotificationsInput>,
+) -> Result<Response<()>, ApiError> {
+    // For each id in body, mark as read
+    for notification_id in  payload.notification_ids {
+        mark_notification_as_read(&state.service, identity.clone(), user_id.clone(), notification_id).await?;
+    }
     Ok(Response::Accepted(()))
 }
