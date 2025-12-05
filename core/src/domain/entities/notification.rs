@@ -6,7 +6,7 @@ use crate::domain::{
     services::generate_id,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum NotificationType {
     Info,
     Warning,
@@ -14,7 +14,7 @@ pub enum NotificationType {
     Success,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum NotificationStatus {
     Pending,
     Sent,
@@ -34,6 +34,18 @@ impl std::fmt::Display for NotificationStatus {
     }
 }
 
+impl From<String> for NotificationStatus {
+    fn from(value: String) -> Self {
+        match value.as_str() {
+            "pending" => NotificationStatus::Pending,
+            "sent" => NotificationStatus::Sent,
+            "failed" => NotificationStatus::Failed,
+            "read" => NotificationStatus::Read,
+            _ => NotificationStatus::Failed,
+        }
+    }
+}
+
 impl std::fmt::Display for NotificationType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
@@ -46,7 +58,19 @@ impl std::fmt::Display for NotificationType {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl From<String> for NotificationType {
+    fn from(value: String) -> Self {
+        match value.as_str() {
+            "info" => NotificationType::Info,
+            "warning" => NotificationType::Warning,
+            "error" => NotificationType::Error,
+            "success" => NotificationType::Success,
+            _ => NotificationType::Error,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Notification {
     pub id: NotificationId,
     pub user_id: UserId,

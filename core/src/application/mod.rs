@@ -5,6 +5,7 @@ use beep_auth::
 use crate::{application::services::ApplicationService, domain::{Config, CoreError, notification::service::NotificationService}, infrastructure::{db::postgres::{Postgres, PostgresConfig}, repositories::notification::PostgresNotificationRepository}};
 
 pub mod services;
+pub mod http;
 
 pub async fn create_service(config: Config) -> Result<ApplicationService, CoreError> {
     let postgres = Postgres::new(PostgresConfig { 

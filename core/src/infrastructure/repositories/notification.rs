@@ -1,9 +1,11 @@
+use std::fmt::Debug;
+
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::domain::{
     CoreError,
-    entities::notification::{InsertNotificationInput, Notification},
+    entities::{UserId, notification::{InsertNotificationInput, Notification}},
     ports::notification::NotificationRepository,
 };
 
@@ -48,5 +50,42 @@ impl NotificationRepository for PostgresNotificationRepository {
         })?;
 
         Ok(notification)
+    }
+
+    async fn get_notifications_for_user(&self, user_id: UserId) -> Result<Vec<Notification>, CoreError> {
+
+        let user_id: Uuid = user_id.into();
+
+        let records = sqlx::query!(
+            r#"
+            SELECT id, channel_id, user_id, title, message, notification_type, status, created_at, metadata, sent_at
+            FROM notifications
+            WHERE user_id = $1 and status = 'Sent'
+            "#,
+            user_id,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| CoreError::FailedGetNotification {
+            message: e.to_string(),
+        })?;
+
+        let notifications = records.into_iter().map(|record| {
+            Notification {
+                id: record.id.into(),
+                channel_id: record.channel_id.into(),
+                user_id: record.user_id.into(),
+                title: record.title,
+                message: record.message,
+                notification_type: record.notification_type.into(),
+                status: record.status.into(),
+                created_at: record.created_at,
+                metadata: record.metadata,
+                sent_at: record.sent_at,
+                read_at: None,
+            }
+        }).collect();
+
+        Ok(notifications)
     }
 }

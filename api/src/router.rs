@@ -28,7 +28,7 @@ pub fn router(state: AppState) -> Result<Router, ApiError> {
 
     let router = Router::new()
         .route("/", get(hello))
-        .route("/idk", get(get_notifications))
+        .route("/users/{user_id}/notifications", get(get_notifications))
         .layer(trace_layer)
         .layer(from_fn_with_state(state.clone(), service_auth_middleware))
         .with_state(state);

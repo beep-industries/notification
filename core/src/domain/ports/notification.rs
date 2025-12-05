@@ -1,6 +1,6 @@
 use crate::domain::{
     CoreError,
-    entities::notification::{InsertNotificationInput, Notification},
+    entities::{UserId, notification::{InsertNotificationInput, Notification}},
 };
 
 pub trait NotificationRepository: Send + Sync {
@@ -8,4 +8,9 @@ pub trait NotificationRepository: Send + Sync {
         &self,
         input: InsertNotificationInput,
     ) -> impl Future<Output = Result<Notification, CoreError>> + Send;
+
+    fn get_notifications_for_user(
+        &self,
+        user_id: UserId,
+    ) -> impl Future<Output = Result<Vec<Notification>, CoreError>> + Send;
 }

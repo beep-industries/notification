@@ -18,6 +18,12 @@ pub enum CoreError {
 
     #[error("Insert notification failed: {message}")]
     FailedInsertNotification { message: String },
+
+    #[error("Get notification failed: {message}")]
+    FailedGetNotification { message: String },
+
+    #[error("Unauthorized")]
+    Unauthorized,
 }
 
 pub struct Config {
