@@ -99,3 +99,19 @@ pub async fn get_notification_preferences(
         notifications_preferences: resp,
     }))
 }
+
+#[axum::debug_handler]
+pub async fn update_notification_preferences(
+    Path(user_id): Path<String>,
+    Extension(identity): Extension<Identity>,
+    State(state): State<AppState>,
+    ValidateJson(payload): ValidateJson<NotificationPreference>,
+) -> Result<Response<()>, ApiError> {
+    state
+        .service
+        .notification_service
+        .update_preferences(identity, user_id, payload)
+        .await?;
+
+    Ok(Response::Accepted(()))
+}

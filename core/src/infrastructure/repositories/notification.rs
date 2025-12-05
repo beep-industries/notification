@@ -161,4 +161,38 @@ impl NotificationRepository for PostgresNotificationRepository {
 
         Ok(preferences)
     }
+
+    async fn update_notification_preferences(
+        &self,
+        user_id: UserId,
+        notification_preferences: NotificationPreference,
+    ) -> Result<(), CoreError> {
+        let user_id: Uuid = user_id.into();
+
+        let channel_id: Uuid = notification_preferences.channel_id.into();
+        let result = sqlx::query!(
+            r#"
+            UPDATE notification_preferences
+            SET enabled = $1, muted_until = $2
+            WHERE user_id = $3 AND channel_id = $4
+            "#,
+            notification_preferences.enabled,
+            notification_preferences.muted_until,
+            user_id,
+            channel_id,
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| CoreError::FailedUpdatePreferences {
+            message: e.to_string(),
+        })?;
+
+        if result.rows_affected() == 0 {
+            return Err(CoreError::FailedUpdatePreferences {
+                message: "preference not found".to_string(),
+            });
+        }
+
+        Ok(())
+    }
 }

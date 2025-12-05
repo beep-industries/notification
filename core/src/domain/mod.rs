@@ -28,6 +28,9 @@ pub enum CoreError {
     #[error("Get preferences failed: {message}")]
     FailedGetPreferences { message: String },
 
+    #[error("Update notification preferences failed: {message}")]
+    FailedUpdatePreferences { message: String },
+
     #[error("Unauthorized")]
     Unauthorized,
 }

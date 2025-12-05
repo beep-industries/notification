@@ -63,3 +63,15 @@ pub async fn get_preferences(
         .get_preferences(identity, user_id)
         .await
 }
+
+pub async fn update_notification_preferences(
+    service: &ApplicationService,
+    identity: Identity,
+    user_id: String,
+    notification_preferences: NotificationPreference,
+) -> Result<(), CoreError> {
+    service
+        .notification_service
+        .update_preferences(identity, user_id, notification_preferences)
+        .await
+}

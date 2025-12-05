@@ -12,7 +12,7 @@ use tracing::info_span;
 use crate::{
     handlers::{
         get_notification_preferences, get_notifications, hello, read_notification,
-        read_notifications,
+        read_notifications, update_notification_preferences,
     },
     state::AppState,
 };
@@ -47,10 +47,11 @@ pub fn router(state: AppState) -> Result<Router, ApiError> {
             "/users/{userId}/notifications/preferences",
             get(get_notification_preferences),
         )
-        // .route("/users/{userId}/notifications/preferences", patch(update_notification_preferences))
+        .route("/users/{userId}/notifications/preferences", patch(update_notification_preferences))
         .layer(trace_layer)
         .layer(from_fn_with_state(state.clone(), service_auth_middleware))
         .with_state(state);
 
     Ok(router)
 }
+

@@ -28,4 +28,10 @@ pub trait NotificationRepository: Send + Sync {
         &self,
         user_id: UserId,
     ) -> impl Future<Output = Result<Vec<NotificationPreference>, CoreError>> + Send;
+
+    fn update_notification_preferences(
+        &self,
+        user_id: UserId,
+        notification_preferences: NotificationPreference,
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
 }

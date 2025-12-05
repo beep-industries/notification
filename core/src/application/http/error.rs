@@ -14,6 +14,7 @@ impl From<CoreError> for ApiError {
             },
             CoreError::FailedMarkNotificationAsRead { message } => Self::Unknown { message },
             CoreError::FailedGetPreferences { message } => Self::Unknown { message },
+            CoreError::FailedUpdatePreferences { message } => Self::Unknown { message },
             CoreError::Unauthorized => Self::Unknown {
                 message: "unauthorized access".to_string(),
             },

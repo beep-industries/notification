@@ -88,4 +88,26 @@ where
             )
             .await
     }
+
+    pub async fn update_preferences(
+        &self,
+        identity: Identity,
+        user_id: String,
+        notification_preferences: NotificationPreference,
+    ) -> Result<(), CoreError> {
+        if identity.id() != user_id {
+            return Err(CoreError::Unauthorized);
+        }
+
+        self.notification_repository
+            .update_notification_preferences(
+                Uuid::parse_str(&user_id)
+                    .map_err(|_| CoreError::FailedUpdatePreferences {
+                        message: "Invalid user ID format".to_string(),
+                    })?
+                    .into(),
+                notification_preferences,
+            )
+            .await
+    }
 }
