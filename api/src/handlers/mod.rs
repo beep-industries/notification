@@ -1,6 +1,9 @@
 use core::{
-    application::{http::ValidateJson, services::{get_notifications_for_user, mark_notification_as_read}},
-    domain::entities::notification::Notification,
+    application::{
+        http::ValidateJson,
+        services::{get_notifications_for_user, get_preferences, mark_notification_as_read},
+    },
+    domain::entities::{notification::Notification, preference::NotificationPreference},
 };
 
 use axum::{
@@ -30,6 +33,11 @@ pub struct NotificationResponse {
 pub struct ReadNotificationsInput {
     #[validate(length(min = 1, message = "ids cannot be empty"))]
     pub notification_ids: Vec<String>,
+}
+
+#[derive(Serialize, PartialEq)]
+pub struct NotificationPreferencesResponse {
+    pub notifications_preferences: Vec<NotificationPreference>,
 }
 
 pub async fn hello(
@@ -62,7 +70,6 @@ pub async fn read_notification(
     Ok(Response::Accepted(()))
 }
 
-#[axum::debug_handler]
 pub async fn read_notifications(
     Path(user_id): Path<String>,
     Extension(identity): Extension<Identity>,
@@ -70,8 +77,25 @@ pub async fn read_notifications(
     ValidateJson(payload): ValidateJson<ReadNotificationsInput>,
 ) -> Result<Response<()>, ApiError> {
     // For each id in body, mark as read
-    for notification_id in  payload.notification_ids {
-        mark_notification_as_read(&state.service, identity.clone(), user_id.clone(), notification_id).await?;
+    for notification_id in payload.notification_ids {
+        mark_notification_as_read(
+            &state.service,
+            identity.clone(),
+            user_id.clone(),
+            notification_id,
+        )
+        .await?;
     }
     Ok(Response::Accepted(()))
+}
+
+pub async fn get_notification_preferences(
+    Path(user_id): Path<String>,
+    Extension(identity): Extension<Identity>,
+    State(state): State<AppState>,
+) -> Result<Response<NotificationPreferencesResponse>, ApiError> {
+    let resp = get_preferences(&state.service, identity, user_id).await?;
+    Ok(Response::OK(NotificationPreferencesResponse {
+        notifications_preferences: resp,
+    }))
 }

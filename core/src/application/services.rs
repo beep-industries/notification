@@ -1,6 +1,16 @@
-use beep_auth::{domain::{models::Identity, ports::HasAuthRepository}, infrastructure::keycloak_repository::KeycloakAuthRepository};
+use beep_auth::{
+    domain::{models::Identity, ports::HasAuthRepository},
+    infrastructure::keycloak_repository::KeycloakAuthRepository,
+};
 
-use crate::{domain::{CoreError, entities::notification::Notification, notification::service::NotificationService}, infrastructure::repositories::notification::PostgresNotificationRepository};
+use crate::{
+    domain::{
+        CoreError,
+        entities::{notification::Notification, preference::NotificationPreference},
+        notification::service::NotificationService,
+    },
+    infrastructure::repositories::notification::PostgresNotificationRepository,
+};
 
 type AuthRepo = KeycloakAuthRepository;
 type NotifRepo = PostgresNotificationRepository;
@@ -19,13 +29,16 @@ pub struct ApplicationService {
     pub notification_service: NotificationService<NotifRepo>,
 }
 
-// impl notification_service for ApplicationService {} // TODO 
+// impl notification_service for ApplicationService {} // TODO
 pub async fn get_notifications_for_user(
     service: &ApplicationService,
     identity: Identity,
     user_id: &str,
-) -> Result<Vec<Notification>, CoreError>{
-    service.notification_service.get_notifications_for_user(identity, user_id).await
+) -> Result<Vec<Notification>, CoreError> {
+    service
+        .notification_service
+        .get_notifications_for_user(identity, user_id)
+        .await
 }
 
 pub async fn mark_notification_as_read(
@@ -34,5 +47,19 @@ pub async fn mark_notification_as_read(
     user_id: String,
     notification_id: String,
 ) -> Result<(), CoreError> {
-    service.notification_service.mark_notification_as_read(identity, user_id, notification_id).await
+    service
+        .notification_service
+        .mark_notification_as_read(identity, user_id, notification_id)
+        .await
+}
+
+pub async fn get_preferences(
+    service: &ApplicationService,
+    identity: Identity,
+    user_id: String,
+) -> Result<Vec<NotificationPreference>, CoreError> {
+    service
+        .notification_service
+        .get_preferences(identity, user_id)
+        .await
 }

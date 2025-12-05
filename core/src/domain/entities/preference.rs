@@ -1,11 +1,12 @@
 use chrono::{DateTime, Utc};
+use serde::Serialize;
 
 use crate::domain::{
     entities::{ChannelId, NotificationId, UserId},
     services::generate_id,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, PartialEq)]
 #[allow(unused)]
 pub struct NotificationPreference {
     pub id: NotificationId,

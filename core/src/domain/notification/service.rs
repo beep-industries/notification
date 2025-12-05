@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use crate::domain::{
     CoreError,
-    entities::{UserId, notification::Notification},
+    entities::{notification::Notification, preference::NotificationPreference},
     ports::notification::NotificationRepository,
 };
 
@@ -34,11 +34,13 @@ where
             return Err(CoreError::Unauthorized);
         }
         self.notification_repository
-            .get_notifications_for_user(Uuid::parse_str(user_id).map_err(|_| {
-                CoreError::FailedGetNotification {
-                    message: "Invalid user ID format".to_string(),
-                }
-            })?.into())
+            .get_notifications_for_user(
+                Uuid::parse_str(user_id)
+                    .map_err(|_| CoreError::FailedGetNotification {
+                        message: "Invalid user ID format".to_string(),
+                    })?
+                    .into(),
+            )
             .await
     }
 
@@ -53,12 +55,36 @@ where
         }
         self.notification_repository
             .mark_notification_as_read(
-                Uuid::parse_str(&user_id).map_err(|_| CoreError::FailedMarkNotificationAsRead {
-                    message: "Invalid user ID format".to_string(),
-                })?.into(),
-                Uuid::parse_str(&notification_id).map_err(|_| CoreError::FailedMarkNotificationAsRead {
-                    message: "Invalid notification ID format".to_string(),
-                })?.into(),
+                Uuid::parse_str(&user_id)
+                    .map_err(|_| CoreError::FailedMarkNotificationAsRead {
+                        message: "Invalid user ID format".to_string(),
+                    })?
+                    .into(),
+                Uuid::parse_str(&notification_id)
+                    .map_err(|_| CoreError::FailedMarkNotificationAsRead {
+                        message: "Invalid notification ID format".to_string(),
+                    })?
+                    .into(),
+            )
+            .await
+    }
+
+    pub async fn get_preferences(
+        &self,
+        identity: Identity,
+        user_id: String,
+    ) -> Result<Vec<NotificationPreference>, CoreError> {
+        if identity.id() != user_id {
+            return Err(CoreError::Unauthorized);
+        }
+
+        self.notification_repository
+            .get_preferences(
+                Uuid::parse_str(&user_id)
+                    .map_err(|_| CoreError::FailedGetPreferences {
+                        message: "Invalid user ID format".to_string(),
+                    })?
+                    .into(),
             )
             .await
     }

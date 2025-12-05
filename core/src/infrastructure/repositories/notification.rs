@@ -8,6 +8,7 @@ use crate::domain::{
     entities::{
         UserId,
         notification::{InsertNotificationInput, Notification},
+        preference::NotificationPreference,
     },
     ports::notification::NotificationRepository,
 };
@@ -125,5 +126,39 @@ impl NotificationRepository for PostgresNotificationRepository {
         }
 
         Ok(())
+    }
+
+    async fn get_preferences(
+        &self,
+        user_id: UserId,
+    ) -> Result<Vec<NotificationPreference>, CoreError> {
+        let user_id: Uuid = user_id.into();
+
+        let records = sqlx::query!(
+            r#"
+            SELECT *
+            FROM notification_preferences
+            WHERE user_id = $1
+            "#,
+            user_id,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| CoreError::FailedGetPreferences {
+            message: e.to_string(),
+        })?;
+
+        let preferences = records
+            .into_iter()
+            .map(|record| NotificationPreference {
+                id: record.id.into(),
+                user_id: record.user_id.into(),
+                channel_id: record.channel_id.into(),
+                enabled: record.enabled,
+                muted_until: record.muted_until,
+            })
+            .collect();
+
+        Ok(preferences)
     }
 }

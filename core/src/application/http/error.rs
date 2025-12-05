@@ -1,4 +1,4 @@
-use beep_server::{ApiError};
+use beep_server::ApiError;
 
 use crate::domain::CoreError;
 
@@ -9,9 +9,14 @@ impl From<CoreError> for ApiError {
             CoreError::FailedGetNotification { message } => Self::Unknown { message },
             CoreError::FailedInsertNotification { message } => Self::Unknown { message },
             CoreError::ServiceUnavailable { service } => Self::Unknown { message: service },
-            CoreError::Unauthorized => Self::Unknown { message: "unauthorized access".to_string() },
-            CoreError::PreferenceNotFound { id } => Self::Unknown { message: id.to_string() },
+            CoreError::PreferenceNotFound { id } => Self::Unknown {
+                message: id.to_string(),
+            },
             CoreError::FailedMarkNotificationAsRead { message } => Self::Unknown { message },
+            CoreError::FailedGetPreferences { message } => Self::Unknown { message },
+            CoreError::Unauthorized => Self::Unknown {
+                message: "unauthorized access".to_string(),
+            },
         }
     }
 }

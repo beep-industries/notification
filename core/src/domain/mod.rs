@@ -4,9 +4,9 @@ use thiserror::Error;
 use crate::domain::entities::PreferenceId;
 
 pub mod entities;
+pub mod notification;
 pub mod ports;
 pub mod services;
-pub mod notification;
 
 #[derive(Debug, Error)]
 pub enum CoreError {
@@ -24,6 +24,9 @@ pub enum CoreError {
 
     #[error("Mark notification as read failed: {message}")]
     FailedMarkNotificationAsRead { message: String },
+
+    #[error("Get preferences failed: {message}")]
+    FailedGetPreferences { message: String },
 
     #[error("Unauthorized")]
     Unauthorized,

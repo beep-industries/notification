@@ -1,6 +1,10 @@
 use crate::domain::{
     CoreError,
-    entities::{NotificationId, UserId, notification::{InsertNotificationInput, Notification}},
+    entities::{
+        NotificationId, UserId,
+        notification::{InsertNotificationInput, Notification},
+        preference::NotificationPreference,
+    },
 };
 
 pub trait NotificationRepository: Send + Sync {
@@ -19,4 +23,9 @@ pub trait NotificationRepository: Send + Sync {
         user_id: UserId,
         notification_id: NotificationId,
     ) -> impl Future<Output = Result<(), CoreError>> + Send;
+
+    fn get_preferences(
+        &self,
+        user_id: UserId,
+    ) -> impl Future<Output = Result<Vec<NotificationPreference>, CoreError>> + Send;
 }
