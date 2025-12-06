@@ -1,7 +1,8 @@
 use axum::{Form, Json, extract::{FromRequest, Request, rejection::FormRejection}};
-use beep_server::ApiError;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use validator::{Validate, ValidationErrors};
+
+use crate::application::http::error::ApiError;
 
 pub mod error;
 
@@ -21,7 +22,7 @@ where
         // Extract the JSON payload body
         let Json(value) = Json::<T>::from_request(req, state)
             .await
-            .map_err(|err| ApiError::Unknown { message: format!("Unexpected payload: {err}") })?;
+            .map_err(|err| ApiError::BadRequest { message: format!("Unexpected payload: {err}") })?;
 
         // Validate the payload
         value.validate().map_err(map_validation_errors)?;
@@ -54,8 +55,7 @@ pub fn map_validation_errors(errors: ValidationErrors) -> ApiError {
         }
     }
 
-    // TODO modify unknown error to a validation error type
-    ApiError::Unknown { message: validation_errors
+    ApiError::ValidationError { message: validation_errors
         .into_iter()
         .map(|e| format!("{}: {}", e.field, e.message))
         .collect::<Vec<String>>()

@@ -1,6 +1,6 @@
 use core::{
     application::{
-        http::ValidateJson,
+        http::{ValidateJson, error::ApiError},
         services::{get_notifications_for_user, get_preferences, mark_notification_as_read},
     },
     domain::entities::{notification::Notification, preference::NotificationPreference},
@@ -11,7 +11,7 @@ use axum::{
     extract::{Path, State},
 };
 use beep_auth::domain::models::Identity;
-use beep_server::{ApiError, http::response::Response};
+use beep_server::{http::response::Response};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 

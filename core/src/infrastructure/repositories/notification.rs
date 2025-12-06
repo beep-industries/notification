@@ -188,9 +188,7 @@ impl NotificationRepository for PostgresNotificationRepository {
         })?;
 
         if result.rows_affected() == 0 {
-            return Err(CoreError::FailedUpdatePreferences {
-                message: "preference not found".to_string(),
-            });
+            return Err(CoreError::PreferenceNotFound);
         }
 
         Ok(())

@@ -13,8 +13,8 @@ pub enum CoreError {
     #[error("Service unavailable: {service}")]
     ServiceUnavailable { service: String },
 
-    #[error("Preference with id {id} not found")]
-    PreferenceNotFound { id: PreferenceId },
+    #[error("Preference not found")]
+    PreferenceNotFound,
 
     #[error("Insert notification failed: {message}")]
     FailedInsertNotification { message: String },

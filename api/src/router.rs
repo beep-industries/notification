@@ -44,10 +44,10 @@ pub fn router(state: AppState) -> Result<Router, ApiError> {
             post(read_notifications),
         )
         .route(
-            "/users/{userId}/notifications/preferences",
+            "/users/{user_id}/notifications/preferences",
             get(get_notification_preferences),
         )
-        .route("/users/{userId}/notifications/preferences", patch(update_notification_preferences))
+        .route("/users/{user_id}/notifications/preferences", patch(update_notification_preferences))
         .layer(trace_layer)
         .layer(from_fn_with_state(state.clone(), service_auth_middleware))
         .with_state(state);

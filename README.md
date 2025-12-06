@@ -1,13 +1,14 @@
 # Notification Service
 
 ```bash
-TOKEN=$(curl -s -X POST "http://localhost:8080/rea
-lms/beep/protocol/openid-connect/token" \
+TOKEN=$(curl -s -v \
+  -X POST "http://localhost:8080/realms/beep/protocol/openid-connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "client_id=client-id" \
   -d "grant_type=password" \
   -d "username=testuser" \
-  -d "password=test123" | jq -r .access_token)
+  -d "password=test123" \
+  | jq -r .access_token)
 ```
 
 ```bash
