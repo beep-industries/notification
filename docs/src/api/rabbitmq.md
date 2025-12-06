@@ -4,7 +4,7 @@ It is assumed that we are going to use RabbitMQ queues, not streams, to simplify
 
 ## Consumers
 
-This service listens for incoming messages and friends requests in order to send notifications to users.
+This service listens for incoming messages, mentions and friend requests in order to store notifications. A separate service handles sending notifications to users via WebSocket (including DND, sound, popup logic).
 
 ### ConsumeMessageCreated
 
@@ -14,40 +14,35 @@ exchange name and type: messages.events of type Topic
 binding: messages.created
 ```
 
-**Purpose:** When a new message is created in the Messages service, send a notification to the recipient based on their notification settings and DND status.
+**Purpose:** When a new message is created in the Messages service, create notification entries based on the `notify_entries` field.
 
 **Context:** Can be either a DM or a server message.
 
-**Message Schema:**
-```
-{
-    "eventId": "evt-msg-001",
-    "timestamp": 1733238721000,
-    "sourceService": "messages",
-    "eventType": "messages.created",
-    "data": {
-        "messageContext": "dm",
-        "serverId": null,
-        "channelId": "ch-123",
-        "messageId": "msg-123",
-        "senderId": "user-456",
-        "recipientId": "user-789",
-        "content": "Hello, how are you?",
-        "createdAt": 1733238721000
-    }
+**Message Schema (Proto):**
+
+```protobuf
+message CreateMessageEvent {
+  string message_id = 1;          // ID of the newly created message
+  string channel_id = 2;          // ID of the channel where the message was posted
+  string author_id = 3;           // ID of the user who authored the message
+  string content = 4;             // Content of the message
+  string reply_to_message_id = 5; // ID of the message being replied to, if any
+  message Attachment {
+    string id = 1;
+    string name = 2;
+    string url = 3;
+  }
+  repeated Attachment attachments = 6;
+  repeated NotifyEntry notify_entries = 7; // Entries to notify (users/roles)
 }
 ```
 
-**Notification Behavior:**
-- **DM Context:** Check user notification settings + DND status
-  - If DND enabled → No notification (silent update to inbox)
-  - If notifications disabled for DMs → No notification (silent update to inbox)
-  - If notifications enabled → Update inbox + Badge + sound + popup
-- **Server Context:** Check server/channel settings + DND status
-  - If DND enabled → No notification (silent update to inbox)
-  - If "All Messages" → Update inbox + Badge + sound + popup
-  - If "@Mentions Only" → No notification (just badge)
-  - If "Muted" → No notification (update inbox + increment unread message counter only)
+**Storage Behavior:**
+
+- For each entry in `notify_entries`, create a notification entry with:
+  - Reference to `message_id`, `channel_id`, `author_id`, and `content`
+  - Mark as unread
+  - Store creation timestamp
 
 ### ConsumeMessageUpdated
 
@@ -57,28 +52,24 @@ exchange name and type: messages.events of type Topic
 binding: messages.updated
 ```
 
-**Purpose:** When an existing message is modified, update the message in the user's inbox WITHOUT sending a notification.
+**Purpose:** When an existing message is modified, update the stored notification WITHOUT triggering a new notification.
 
-**Message Schema:**
+**Message Schema (Proto):**
 
-```
-{
-    "eventId": "evt-msg-002",
-    "timestamp": 1733238721000,
-    "sourceService": "messages",
-    "eventType": "messages.updated",
-    "data": {
-        "messageId": "msg-123",
-        "senderId": "user-456",
-        "recipientId": "user-789",
-        "serverId": null,
-        "channelId": null,
-        "updatedAt": 1733238721000,
-        "updatedFields": ["content", "editedAt"],
-        "newContent": "Hello, how are you? (edited)"
-    }
+```protobuf
+message UpdateMessageEvent {
+  string message_id = 1;        // ID of the message being updated
+  string content = 2;           // Updated content of the message
+  optional bool is_pinned = 3;  // Whether the message is pinned
+  repeated NotifyEntry notify_entries = 4; // Entries to notify of the update
 }
 ```
+
+**Storage Behavior:**
+
+- Update the content of existing notifications for this `message_id`
+- If `is_pinned` is true, mark notification as pinned
+- No new notifications are created
 
 ### ConsumeMessageDeleted
 
@@ -88,100 +79,22 @@ exchange name and type: messages.events of type Topic
 binding: messages.deleted
 ```
 
-**Purpose:** When a message is deleted, update the user's inbox WITHOUT sending a notification.
+**Purpose:** When a message is deleted, remove all associated notifications from the storage.
 
-**Message Schema:**
+**Message Schema (Proto):**
 
-```
-{
-    "eventId": "evt-msg-003",
-    "timestamp": 1733238721000,
-    "sourceService": "messages",
-    "eventType": "messages.deleted",
-    "data": {
-        "messageId": "msg-123",
-        "senderId": "user-456",
-        "recipientId": "user-789",
-        "messageContext": "server",
-        "serverId": "srv-001",
-        "channelId": "ch-001",
-        "deletedAt": 1733238721000
-    }
+```protobuf
+message DeleteMessageEvent {
+  string message_id = 1; // ID of the message being deleted
 }
 ```
 
-### ConsumeMessageMentionAdded
+**Storage Behavior:**
 
-```
-queue: notifications.messages.mention.added
-exchange name and type: messages.events of type Topic
-binding: messages.mention.added
-```
+- Delete all notifications associated with this `message_id`
+- Users should no longer see this notification in their inbox
 
-**Purpose:** When a user is mentioned (@username) in a message, send a  notification to the mentioned user(s), overriding most settings but respecting DND.
-
-**Context:** Can be in a DM or a server message.
-
-**Notification Behavior:**
-- **DND Enabled:** NO notification (update inbox, update badge)
-- **DND Disabled:**
-  - Popup
-  - Sound
-  - Badge with mention highlight
-  - Even if channel/server is muted, mention notification plays
-
-**Message Schema:**
-
-{
-    "eventId": "evt-msg-mention-001",
-    "timestamp": 1733238721000,
-    "sourceService": "messages",
-    "eventType": "messages.mention.added",
-    "data": {
-        "messageContext": "server",
-        "serverId": "srv-001",
-        "channelId": "ch-001",
-        "messageId": "msg-123",
-        "authorId": "user-456",
-        "mentionedUserIds": ["user-789", "user-999"],
-        "content": "Hey @user-789 and @user-999, check this out!",
-        "mentionedAt": 1733238721000
-    }
-}
-
-### ConsumeMessageMentionRemoved
-
-```
-queue: notifications.messages.mention.removed
-exchange name and type: messages.events of type Topic
-binding: messages.mention.removed
-```
-
-**Purpose:** When a mention is removed from a message (message edited or deleted), update the inbox WITHOUT sending a notification.
-
-**Message Schema:**
-
-```
-{
-    "eventId": "evt-msg-mention-002",
-    "timestamp": 1733238721000,
-    "sourceService": "messages",
-    "eventType": "messages.mention.removed",
-    "data": {
-        "messageId": "msg-123",
-        "authorId": "user-456",
-        "messageContext": "server",
-        "serverId": "srv-001",
-        "previousMentions": [
-            {
-                "type": "user",
-                "userId": "user-789"
-            }
-        ],
-        "removedAt": 1733238721000
-    }
-}
-```
+**TODO:** Ensure cleanup of notifications for users who were mentioned but the message was deleted.
 
 ### ConsumeFriendsRequestSent
 
@@ -191,27 +104,29 @@ exchange name and type: friends.events of type Topic
 binding: friends.request.sent
 ```
 
-**Purpose**: When a friend request is created in the Friend service, send a notification to the recipient.
+**Purpose**: When a friend request is created in the Friend service, create a notification for the recipient.
 
-**Notification Behavior:**
-- **DND Enabled** → No notification (silent update + update inbox)
-- **DND Disabled:**
-  - If friend request notifications enabled → update inbox + sound + popup
-  - If disabled → update inbox + Silent update only
+**Storage Behavior:**
+
+- Create a notification entry for the `recipientId`
+- Store reference to `requestId`, `senderId`
+- Mark as unread
+- Store creation timestamp
 
 **Message Schema:**
-```
+
+```json
 {
-    "eventId": "evt-fr-001",
-    "timestamp": 1733238721000,
-    "sourceService": "friends",
-    "eventType": "friends.request.sent",
-    "data": {
-        "requestId": "fr-req-001",
-        "senderId": "user-456",
-        "recipientId": "user-789",
-        "sentAt": 1733238721000
-    }
+  "eventId": "evt-fr-001",
+  "timestamp": 1733238721000,
+  "sourceService": "friends",
+  "eventType": "friends.request.sent",
+  "data": {
+    "requestId": "fr-req-001",
+    "senderId": "user-456",
+    "recipientId": "user-789",
+    "sentAt": 1733238721000
+  }
 }
 ```
 
@@ -223,21 +138,22 @@ exchange name and type: friends.events of type Topic
 binding: friends.request.accepted
 ```
 
-**Purpose**: When a friend request is accepted in the Friend service, send a notification to the sender.
+**Purpose**: When a friend request is accepted in the Friend service, create a notification for the sender.
 
 **Message Schema:**
-```
+
+```json
 {
-    "eventId": "evt-fr-001",
-    "timestamp": 1733238721000,
-    "sourceService": "friends",
-    "eventType": "friends.request.accepted",
-    "data": {
-        "requestId": "fr-req-001",
-        "senderId": "user-456",
-        "recipientId": "user-789",
-        "acceptedAt": 1733238721000
-    }
+  "eventId": "evt-fr-001",
+  "timestamp": 1733238721000,
+  "sourceService": "friends",
+  "eventType": "friends.request.accepted",
+  "data": {
+    "requestId": "fr-req-001",
+    "senderId": "user-456",
+    "recipientId": "user-789",
+    "acceptedAt": 1733238721000
+  }
 }
 ```
 
@@ -249,20 +165,25 @@ exchange name and type: friends.events of type Topic
 binding: friends.request.canceled
 ```
 
-**Purpose**: When a friend request is canceled in the Friend service, update the inbox, WITHOUT notifying the user.
+**Purpose**: When a friend request is canceled in the Friend service, remove the associated notification from storage.
 
 **Message Schema:**
-```
+
+```json
 {
-    "eventId": "evt-fr-001",
-    "timestamp": 1733238721000,
-    "sourceService": "friends",
-    "eventType": "friends.request.canceled",
-    "data": {
-        "requestId": "fr-req-001",
-        "senderId": "user-456",
-        "recipientId": "user-789",
-        "canceledAt": 1733238721000
-    }
+  "eventId": "evt-fr-001",
+  "timestamp": 1733238721000,
+  "sourceService": "friends",
+  "eventType": "friends.request.canceled",
+  "data": {
+    "requestId": "fr-req-001",
+    "senderId": "user-456",
+    "recipientId": "user-789",
+    "canceledAt": 1733238721000
+  }
 }
 ```
+
+**Storage Behavior:**
+
+- Delete the notification associated with this `requestId`
