@@ -4,7 +4,7 @@ use validator::Validate;
 
 use crate::domain::{
     entities::{ChannelId, NotificationId, UserId},
-    services::generate_id,
+    generate_id,
 };
 
 #[derive(Debug, Clone, Serialize, PartialEq, Validate, Deserialize)]

@@ -7,8 +7,7 @@ use crate::{
     domain::{
         CoreError,
         entities::{notification::Notification, preference::NotificationPreference},
-        notification::service::NotificationServiceImpl,
-        ports::notification::NotificationService,
+        ports::notification::NotificationService, services::service::NotificationServiceImpl,
     },
     infrastructure::repositories::notification::PostgresNotificationRepository,
 };

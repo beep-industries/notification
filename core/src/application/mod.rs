@@ -2,7 +2,7 @@ use beep_auth::infrastructure::keycloak_repository::KeycloakAuthRepository;
 
 use crate::{
     application::services::ApplicationService,
-    domain::{Config, CoreError, notification::service::NotificationServiceImpl},
+    domain::{Config, CoreError, services::service::NotificationServiceImpl},
     infrastructure::{
         db::postgres::{Postgres, PostgresConfig},
         repositories::notification::PostgresNotificationRepository,

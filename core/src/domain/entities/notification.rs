@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::domain::{
     entities::{ChannelId, NotificationId, UserId},
-    services::generate_id,
+    generate_id,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
