@@ -86,7 +86,6 @@ pub async fn get_notification_preferences(
     }))
 }
 
-#[axum::debug_handler]
 pub async fn update_notification_preferences(
     Path(user_id): Path<String>,
     Extension(identity): Extension<Identity>,
