@@ -1,419 +1,167 @@
-openapi: 3.0.4
+openapi: 3.0.0
 info:
-  title: Swagger Notifications - OpenAPI 3.0
-  description: |-
-    Notifications Service API for managing user inbox and notification preferences.
+  title: Beep Notification Service
+  version: 1.2.0
 
-    This API handles:
-    - Fetching unread message counts and badges
-    - Managing notification preferences (per user, per server, per channel)
-    - Managing Do Not Disturb (DND) status
-    - Marking channels as read
-    - Real-time notification events via WebSocket (see WebSocket.md)
-    
-    The service integrates with RabbitMQ for event-driven notification processing.
-
-  termsOfService: https://swagger.io/terms/
-  license:
-    name: Apache 2.0
-    url: https://www.apache.org/licenses/LICENSE-2.0.html
-  version: 1.0.12
-externalDocs:
-  description: Find out more about Swagger
-  url: https://swagger.io
-servers:
-  - url: http://localhost:8080/api/v1
-    description: Development server
-    
 tags:
-  - name: Inbox
-    description: Retrieve user inbox with unread counts and badges
+  - name: Notifications
+    description: User notifications operations
   - name: Preferences
-    description: Manage user notification preferences and settings
-  - name: DND
-    description: Manage Do Not Disturb status
-  - name: Channels
-    description: Channel-specific notification actions
-  - name: Health
-    description: Service health check
+    description: User notification preference management
+security:
+  - BearerAuth: []
 
-    
 paths:
-  /users/@me/channels:
+  /users/{userId}/notifications:
     get:
       tags:
-        - Inbox
-      summary: Get all DM channels with unread counts
-      description: Retrieve list of all direct messages with unread message counts
-      operationId: getDMChannels
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/DMChannel'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearer_auth: []
-
-  /guilds:
-    get:
-      tags:
-        - Inbox
-      summary: Get all servers with channel unread counts
-      description: Retrieve list of all servers and their channels with unread counts
-      operationId: getServers
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Server'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearer_auth: []
-
-  /guilds/{guild_id}:
-    get:
-      tags:
-        - Inbox
-      summary: Get specific server with channel unread counts
-      description: Retrieve a specific server and all its channels with unread counts
-      operationId: getServerById
+        - Notifications
+      summary: Get notifications for a user
+      description: Retrieve a paginated list of notifications for a specific user.
       parameters:
-        - name: guild_id
+        - name: userId
           in: path
-          description: Server/Guild ID
           required: true
           schema:
             type: string
-            format: uuid
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Server'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Server not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearer_auth: []
-
-  /guilds/{guild_id}/channels:
-    get:
-      tags:
-        - Inbox
-      summary: Get all channels in a server with unread counts
-      description: Retrieve all channels in a specific server with unread counts
-      operationId: getServerChannels
-      parameters:
-        - name: guild_id
-          in: path
-          description: Server/Guild ID
-          required: true
+        - name: unread
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filter only unread notifications.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Maximum number of notifications to return.
+        - name: cursor
+          in: query
+          required: false
           schema:
             type: string
-            format: uuid
+          description: Cursor for pagination.
       responses:
         '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Channel'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Server not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearer_auth: []
-
-  /channels/{channel_id}/read:
-    post:
-      tags:
-        - Channels
-      summary: Mark channel as read
-      description: Mark all unread messages in a channel as read (resets unread_count to 0)
-      operationId: markChannelAsRead
-      parameters:
-        - name: channel_id
-          in: path
-          description: Channel ID
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Channel marked as read
+          description: List of notifications
           content:
             application/json:
               schema:
                 type: object
-                required:
-                  - channelId
-                  - unread_count
                 properties:
-                  channelId:
+                  notifications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+                  cursor:
                     type: string
-                    format: uuid
-                  unread_count:
-                    type: integer
-                    default: 0
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Channel not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearer_auth: []
+                    nullable: true
+                  has_more:
+                    type: boolean
 
-  /channels/{channel_id}/notification-settings:
-    get:
-      tags:
-        - Channels
-      summary: Get channel notification settings
-      description: Retrieve notification settings for a specific channel
-      operationId: getChannelNotificationSettings
-      parameters:
-        - name: channel_id
-          in: path
-          description: Channel ID
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ChannelNotificationSettings'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Channel not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearer_auth: []
-
+  /users/{userId}/notifications/{notificationId}:
     patch:
       tags:
-        - Channels
-      summary: Update channel notification settings
-      description: Update notification settings for a specific channel (mute, notification level)
-      operationId: updateChannelNotificationSettings
+        - Notifications
+      summary: Mark a notification as read or unread
       parameters:
-        - name: channel_id
+        - name: userId
           in: path
-          description: Channel ID
           required: true
           schema:
             type: string
-            format: uuid
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
-        description: Channel notification settings to update
         required: true
         content:
           application/json:
             schema:
               type: object
               properties:
-                muted:
+                read:
                   type: boolean
-                  description: Mute all notifications for this channel
-                notification_level:
-                  type: integer
-                  enum: [0, 1, 2, 3]
-                  description: |
-                    0 = All Messages
-                    1 = @Mentions Only
-                    2 = Nothing
-                    3 = Muted
       responses:
         '200':
-          description: Channel settings updated
+          description: Notification updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ChannelNotificationSettings'
-        '400':
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Channel not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearer_auth: []
+                $ref: '#/components/schemas/Notification'
 
-  /users/@me/settings/notification:
+  /users/{userId}/notifications/read:
+    post:
+      tags:
+        - Notifications
+      summary: Mark multiple notifications as read
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Notifications marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated:
+                    type: integer
+
+  /users/{userId}/notifications/preferences:
     get:
       tags:
         - Preferences
-      summary: Get user notification preferences
-      description: Retrieve global notification preferences for the current user
-      operationId: getNotificationPreferences
+      summary: Get a user's notification preferences
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         '200':
-          description: Successful operation
+          description: Notification preferences
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotificationPreferences'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearer_auth: []
 
     patch:
       tags:
         - Preferences
-      summary: Update user notification preferences
-      description: Update global notification preferences for the current user
-      operationId: updateNotificationPreferences
+      summary: Update a user's notification preferences
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
-        description: Notification preferences to update
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                dm_notifications:
-                  type: integer
-                  enum: [0, 1, 2]
-                  description: |
-                    0 = All Messages
-                    1 = Friends Only
-                    2 = Muted
-                friend_request_notifications:
-                  type: boolean
-                  description: Enable/disable friend request notifications
-                friend_request_sound:
-                  type: boolean
-                  description: Play sound for friend request notifications
-                mention_sound:
-                  type: boolean
-                  description: Play sound for mentions
-                mention_desktop:
-                  type: boolean
-                  description: Show desktop notification for mentions
+              $ref: '#/components/schemas/NotificationPreferences'
       responses:
         '200':
           description: Preferences updated
@@ -421,391 +169,57 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotificationPreferences'
-        '400':
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearer_auth: []
-
-  /users/@me/settings/dnd:
-    get:
-      tags:
-        - DND
-      summary: Get Do Not Disturb status
-      description: Retrieve current Do Not Disturb status and schedule for the user
-      operationId: getDNDStatus
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DNDStatus'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearer_auth: []
-
-    put:
-      tags:
-        - DND
-      summary: Update Do Not Disturb status
-      description: Set Do Not Disturb status (off, idle, dnd, invisible)
-      operationId: updateDNDStatus
-      requestBody:
-        description: DND status to set
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - status
-              properties:
-                status:
-                  type: string
-                  enum:
-                    - 'off'
-                    - idle
-                    - dnd
-                    - invisible
-                  description: |
-                    off = All notifications enabled
-                    idle = No sounds/popups
-                    dnd = Do Not Disturb (silent)
-                    invisible = Offline (silent)
-      responses:
-        '200':
-          description: DND status updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DNDStatus'
-        '400':
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearer_auth: []
-
-  /health/liveness:
-    get:
-      tags:
-        - Health
-      summary: Kubernetes Liveness Probe
-      description: Returns 200 if service is alive
-      operationId: livenessProbe
-      responses:
-        '200':
-          description: Service is alive
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: alive
-
-  /health/readiness:
-    get:
-      tags:
-        - Health
-      summary: Kubernetes Readiness Probe
-      description: Returns 200 if service is ready to receive traffic (DB + RabbitMQ connected)
-      operationId: readinessProbe
-      responses:
-        '200':
-          description: Service is ready
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: ready
 
 components:
   schemas:
-    DMChannel:
+    Notification:
       type: object
-      required:
-        - id
-        - recipientId
-        - recipientName
-        - unread_count
       properties:
         id:
           type: string
-          format: uuid
-          description: Channel/DM ID
-        recipientId:
-          type: string
-          format: uuid
-          description: User ID of the recipient
-        recipientName:
-          type: string
-          description: Username of the recipient
-        recipientAvatar:
-          type: string
-          nullable: true
-          description: Avatar URL of the recipient
-        unread_count:
-          type: integer
-          minimum: 0
-          description: Number of unread messages
-          default: 0
-        lastMessageId:
-          type: string
-          format: uuid
-          nullable: true
-          description: ID of the last message
-        lastMessageTimestamp:
-          type: string
-          format: date-time
-          nullable: true
-          description: Timestamp of the last message
-        lastMessagePreview:
-          type: string
-          maxLength: 100
-          nullable: true
-          description: Preview text of the last message
-
-    Server:
-      type: object
-      required:
-        - id
-        - name
-        - channels
-        - unread_count
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Server/Guild ID
-        name:
-          type: string
-          description: Server name
-        icon:
-          type: string
-          nullable: true
-          description: Server icon URL
-        unread_count:
-          type: integer
-          minimum: 0
-          description: Total unread messages across all channels
-          default: 0
-        channels:
-          type: array
-          items:
-            $ref: '#/components/schemas/Channel'
-
-    Channel:
-      type: object
-      required:
-        - id
-        - name
-        - type
-        - unread_count
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Channel ID
-        name:
-          type: string
-          description: Channel name
         type:
           type: string
-          enum:
-            - text
-            - voice
-        unread_count:
-          type: integer
-          minimum: 0
-          description: Number of unread messages in this channel
-          default: 0
-        muted:
-          type: boolean
-          description: Whether channel notifications are muted
-          default: false
-        notification_level:
-          type: integer
-          enum: [0, 1, 2, 3]
-          description: |
-            0 = All Messages
-            1 = @Mentions Only
-            2 = Nothing
-            3 = Muted
-          default: 0
-        lastMessageId:
+          example: MESSAGE
+        title:
           type: string
-          format: uuid
-          nullable: true
-        lastMessageTimestamp:
+          example: Nouveau message
+        content:
+          type: string
+        context:
+          type: object
+          example:
+            guild_id: "789"
+            channel_id: "456"
+            message_id: "msg_9988"
+        read:
+          type: boolean
+        created_at:
           type: string
           format: date-time
-          nullable: true
-
-    ChannelNotificationSettings:
-      type: object
-      required:
-        - channelId
-        - muted
-        - notification_level
-      properties:
-        channelId:
-          type: string
-          format: uuid
-        muted:
-          type: boolean
-          default: false
-        notification_level:
-          type: integer
-          enum: [0, 1, 2, 3]
-          description: |
-            0 = All Messages
-            1 = @Mentions Only
-            2 = Nothing
-            3 = Muted
-          default: 0
 
     NotificationPreferences:
       type: object
-      required:
-        - userId
-        - dm_notifications
-        - friend_request_notifications
+      description: User notification preference settings.
       properties:
-        userId:
-          type: string
-          format: uuid
-        dm_notifications:
-          type: integer
-          enum: [0, 1, 2]
-          description: |
-            0 = All Messages
-            1 = Friends Only
-            2 = Muted
-          default: 0
-        friend_request_notifications:
+        receive_notifications:
           type: boolean
-          default: true
-        friend_request_sound:
-          type: boolean
-          default: false
-        mention_sound:
-          type: boolean
-          default: true
-        mention_desktop:
-          type: boolean
-          default: true
-        updatedAt:
-          type: string
-          format: date-time
-
-    DNDStatus:
-      type: object
-      required:
-        - status
-      properties:
-        status:
-          type: string
-          enum:
-            - 'off'
-            - idle
-            - dnd
-            - invisible
-          description: |
-            off = All notifications enabled
-            idle = No sounds/popups
-            dnd = Do Not Disturb (silent)
-            invisible = Offline (silent)
-        schedule:
+          example: true
+        types_enabled:
           type: object
-          nullable: true
-          properties:
-            enabled:
-              type: boolean
-              default: false
-            startTime:
-              type: string
-              format: time
-              example: '22:00'
-            endTime:
-              type: string
-              format: time
-              example: '08:00'
-          description: Optional scheduled DND
-        setAt:
-          type: string
-          format: date-time
-
-    Error:
-      type: object
-      required:
-        - code
-        - message
-      properties:
-        code:
-          type: string
-          description: Error code
-          example: INVALID_REQUEST
-        message:
-          type: string
-          description: Human-readable error message
-          example: Invalid parameters provided
-        details:
-          type: object
-          nullable: true
-          description: Additional error details
-        timestamp:
-          type: string
-          format: date-time
-
+          description: Enable/disable notifications by type.
+          example:
+            MESSAGE: true
+            FRIEND_REQUEST: true
+            SYSTEM: false
+        push_enabled:
+          type: boolean
+          example: true
+        email_enabled:
+          type: boolean
+          example: false
+          
   securitySchemes:
-    bearer_auth:
+    BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT Bearer token for authentication
