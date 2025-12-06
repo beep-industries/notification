@@ -1,16 +1,22 @@
-use beep_auth::
-    infrastructure::keycloak_repository::KeycloakAuthRepository
-;
+use beep_auth::infrastructure::keycloak_repository::KeycloakAuthRepository;
 
-use crate::{application::services::ApplicationService, domain::{Config, CoreError, notification::service::NotificationService}, infrastructure::{db::postgres::{Postgres, PostgresConfig}, repositories::notification::PostgresNotificationRepository}};
+use crate::{
+    application::services::ApplicationService,
+    domain::{Config, CoreError, notification::service::NotificationService},
+    infrastructure::{
+        db::postgres::{Postgres, PostgresConfig},
+        repositories::notification::PostgresNotificationRepository,
+    },
+};
 
-pub mod services;
 pub mod http;
+pub mod services;
 
 pub async fn create_service(config: Config) -> Result<ApplicationService, CoreError> {
-    let postgres = Postgres::new(PostgresConfig { 
+    let postgres = Postgres::new(PostgresConfig {
         database_url: config.database.database_url.clone(),
-    }).await?;
+    })
+    .await?;
     let auth_repository = KeycloakAuthRepository::new(&config.auth.issuer, None);
     let notification_repository = PostgresNotificationRepository::new(postgres.get_db());
 
