@@ -1,3 +1,5 @@
+use beep_auth::domain::models::Identity;
+
 use crate::domain::{
     CoreError,
     entities::{
@@ -6,6 +8,34 @@ use crate::domain::{
         preference::NotificationPreference,
     },
 };
+
+pub trait NotificationService: Send + Sync {
+    fn get_notifications_for_user(
+        &self,
+        identity: Identity,
+        user_id: &str,
+    ) -> impl Future<Output = Result<Vec<Notification>, CoreError>> + Send;
+
+    fn mark_notification_as_read(
+        &self,
+        identity: Identity,
+        user_id: String,
+        notification_id: String,
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
+
+    fn get_preferences(
+        &self,
+        identity: Identity,
+        user_id: String,
+    ) -> impl Future<Output = Result<Vec<NotificationPreference>, CoreError>> + Send;
+
+    fn update_preferences(
+        &self,
+        identity: Identity,
+        user_id: String,
+        notification_preferences: NotificationPreference,
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
+}
 
 pub trait NotificationRepository: Send + Sync {
     fn insert(

@@ -4,28 +4,33 @@ use uuid::Uuid;
 use crate::domain::{
     CoreError,
     entities::{notification::Notification, preference::NotificationPreference},
-    ports::notification::NotificationRepository,
+    ports::notification::{NotificationRepository, NotificationService},
 };
 
 #[derive(Clone)]
-pub struct NotificationService<N>
+pub struct NotificationServiceImpl<N>
 where
     N: NotificationRepository,
 {
     pub notification_repository: N,
 }
 
-impl<N> NotificationService<N>
+impl<N> NotificationServiceImpl<N>
 where
     N: NotificationRepository,
 {
     pub fn new(notification_repository: N) -> Self {
-        NotificationService {
+        Self {
             notification_repository,
         }
     }
+}
 
-    pub async fn get_notifications_for_user(
+impl<N> NotificationService for NotificationServiceImpl<N>
+where
+    N: NotificationRepository,
+{
+    async fn get_notifications_for_user(
         &self,
         identity: Identity,
         user_id: &str,
@@ -44,7 +49,7 @@ where
             .await
     }
 
-    pub async fn mark_notification_as_read(
+    async fn mark_notification_as_read(
         &self,
         identity: Identity,
         user_id: String,
@@ -69,7 +74,7 @@ where
             .await
     }
 
-    pub async fn get_preferences(
+    async fn get_preferences(
         &self,
         identity: Identity,
         user_id: String,
@@ -89,7 +94,7 @@ where
             .await
     }
 
-    pub async fn update_preferences(
+    async fn update_preferences(
         &self,
         identity: Identity,
         user_id: String,

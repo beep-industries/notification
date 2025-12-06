@@ -1,8 +1,6 @@
 use beep_server::config::AuthConfig;
 use thiserror::Error;
 
-use crate::domain::entities::PreferenceId;
-
 pub mod entities;
 pub mod notification;
 pub mod ports;

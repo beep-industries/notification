@@ -1,9 +1,9 @@
 use core::{
-    application::{
-        http::{ValidateJson, error::ApiError},
-        services::{get_notifications_for_user, get_preferences, mark_notification_as_read},
+    application::http::{ValidateJson, error::ApiError},
+    domain::{
+        entities::{notification::Notification, preference::NotificationPreference},
+        ports::notification::NotificationService,
     },
-    domain::entities::{notification::Notification, preference::NotificationPreference},
 };
 
 use axum::{
@@ -11,7 +11,7 @@ use axum::{
     extract::{Path, State},
 };
 use beep_auth::domain::models::Identity;
-use beep_server::{http::response::Response};
+use beep_server::http::response::Response;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -55,7 +55,10 @@ pub async fn get_notifications(
     Extension(identity): Extension<Identity>,
     State(state): State<AppState>,
 ) -> Result<Response<NotificationResponse>, ApiError> {
-    let resp = get_notifications_for_user(&state.service, identity, &user_id).await?;
+    let resp = state
+        .service
+        .get_notifications_for_user(identity, &user_id)
+        .await?;
     Ok(Response::OK(NotificationResponse {
         notifications: resp,
     }))
@@ -66,7 +69,10 @@ pub async fn read_notification(
     Extension(identity): Extension<Identity>,
     State(state): State<AppState>,
 ) -> Result<Response<()>, ApiError> {
-    mark_notification_as_read(&state.service, identity, user_id, notification_id).await?;
+    state
+        .service
+        .mark_notification_as_read(identity, user_id, notification_id)
+        .await?;
     Ok(Response::Accepted(()))
 }
 
@@ -78,13 +84,10 @@ pub async fn read_notifications(
 ) -> Result<Response<()>, ApiError> {
     // For each id in body, mark as read
     for notification_id in payload.notification_ids {
-        mark_notification_as_read(
-            &state.service,
-            identity.clone(),
-            user_id.clone(),
-            notification_id,
-        )
-        .await?;
+        state
+            .service
+            .mark_notification_as_read(identity.clone(), user_id.clone(), notification_id)
+            .await?;
     }
     Ok(Response::Accepted(()))
 }
@@ -94,7 +97,7 @@ pub async fn get_notification_preferences(
     Extension(identity): Extension<Identity>,
     State(state): State<AppState>,
 ) -> Result<Response<NotificationPreferencesResponse>, ApiError> {
-    let resp = get_preferences(&state.service, identity, user_id).await?;
+    let resp = state.service.get_preferences(identity, user_id).await?;
     Ok(Response::OK(NotificationPreferencesResponse {
         notifications_preferences: resp,
     }))
@@ -109,7 +112,6 @@ pub async fn update_notification_preferences(
 ) -> Result<Response<()>, ApiError> {
     state
         .service
-        .notification_service
         .update_preferences(identity, user_id, payload)
         .await?;
 

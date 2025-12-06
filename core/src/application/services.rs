@@ -7,7 +7,8 @@ use crate::{
     domain::{
         CoreError,
         entities::{notification::Notification, preference::NotificationPreference},
-        notification::service::NotificationService,
+        notification::service::NotificationServiceImpl,
+        ports::notification::NotificationService,
     },
     infrastructure::repositories::notification::PostgresNotificationRepository,
 };
@@ -26,52 +27,43 @@ impl HasAuthRepository for ApplicationService {
 #[derive(Clone)]
 pub struct ApplicationService {
     pub auth_repository: AuthRepo,
-    pub notification_service: NotificationService<NotifRepo>,
+    pub notification_service: NotificationServiceImpl<NotifRepo>,
 }
 
-// impl notification_service for ApplicationService {} // TODO
-pub async fn get_notifications_for_user(
-    service: &ApplicationService,
-    identity: Identity,
-    user_id: &str,
-) -> Result<Vec<Notification>, CoreError> {
-    service
-        .notification_service
-        .get_notifications_for_user(identity, user_id)
-        .await
-}
+impl NotificationService for ApplicationService {
+    fn get_notifications_for_user(
+        &self,
+        identity: Identity,
+        user_id: &str,
+    ) -> impl Future<Output = Result<Vec<Notification>, CoreError>> + Send {
+        self.notification_service
+            .get_notifications_for_user(identity, user_id)
+    }
+    fn mark_notification_as_read(
+        &self,
+        identity: Identity,
+        user_id: String,
+        notification_id: String,
+    ) -> impl Future<Output = Result<(), CoreError>> + Send {
+        self.notification_service
+            .mark_notification_as_read(identity, user_id, notification_id)
+    }
 
-pub async fn mark_notification_as_read(
-    service: &ApplicationService,
-    identity: Identity,
-    user_id: String,
-    notification_id: String,
-) -> Result<(), CoreError> {
-    service
-        .notification_service
-        .mark_notification_as_read(identity, user_id, notification_id)
-        .await
-}
+    fn get_preferences(
+        &self,
+        identity: Identity,
+        user_id: String,
+    ) -> impl Future<Output = Result<Vec<NotificationPreference>, CoreError>> + Send {
+        self.notification_service.get_preferences(identity, user_id)
+    }
 
-pub async fn get_preferences(
-    service: &ApplicationService,
-    identity: Identity,
-    user_id: String,
-) -> Result<Vec<NotificationPreference>, CoreError> {
-    service
-        .notification_service
-        .get_preferences(identity, user_id)
-        .await
-}
-
-pub async fn update_notification_preferences(
-    service: &ApplicationService,
-    identity: Identity,
-    user_id: String,
-    notification_preferences: NotificationPreference,
-) -> Result<(), CoreError> {
-    service
-        .notification_service
-        .update_preferences(identity, user_id, notification_preferences)
-        .await
+    fn update_preferences(
+        &self,
+        identity: Identity,
+        user_id: String,
+        notification_preferences: NotificationPreference,
+    ) -> impl Future<Output = Result<(), CoreError>> + Send {
+        self.notification_service
+            .update_preferences(identity, user_id, notification_preferences)
+    }
 }
