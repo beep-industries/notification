@@ -1,7 +1,15 @@
-use axum::Extension;
+use core::{
+    application::http::error::ApiError,
+};
+
+use axum::{
+    Extension,
+};
 use beep_auth::domain::models::Identity;
-use beep_server::{ApiError, http::response::Response};
-use serde::Serialize;
+use beep_server::http::response::Response;
+use serde::{Serialize};
+
+pub mod notification;
 
 #[derive(Serialize, PartialEq)]
 pub struct HelloResponse {

@@ -4,12 +4,21 @@ use axum::{
     http::StatusCode,
     middleware::{Next, from_fn_with_state},
     response::Response,
-    routing::get,
+    routing::{get, patch, post},
 };
 use beep_server::{ApiError, http::auth_middleware};
 use tracing::info_span;
 
-use crate::{handlers::hello, state::AppState};
+use crate::{
+    handlers::{
+        hello,
+        notification::{
+            get_notification_preferences, get_notifications, read_notification, read_notifications,
+            update_notification_preferences,
+        },
+    },
+    state::AppState,
+};
 
 async fn service_auth_middleware(
     State(state): State<AppState>,
@@ -28,6 +37,23 @@ pub fn router(state: AppState) -> Result<Router, ApiError> {
 
     let router = Router::new()
         .route("/", get(hello))
+        .route("/users/{user_id}/notifications", get(get_notifications))
+        .route(
+            "/users/{user_id}/notifications/{notification_id}/read",
+            patch(read_notification),
+        )
+        .route(
+            "/users/{user_id}/notifications/read",
+            post(read_notifications),
+        )
+        .route(
+            "/users/{user_id}/notifications/preferences",
+            get(get_notification_preferences),
+        )
+        .route(
+            "/users/{user_id}/notifications/preferences",
+            patch(update_notification_preferences),
+        )
         .layer(trace_layer)
         .layer(from_fn_with_state(state.clone(), service_auth_middleware))
         .with_state(state);

@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE notification_preferences\n            SET enabled = $1, muted_until = $2\n            WHERE user_id = $3 AND channel_id = $4\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Bool",
+        "Timestamptz",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cc49d758b89cfdfd1ce2db80cf03b37df69d200af2ca8dad2015590288bf4a2d"
+}

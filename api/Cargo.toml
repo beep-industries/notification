@@ -14,9 +14,11 @@ beep-server = { git = "https://github.com/beep-industries/crates" }
 beep-auth = { git = "https://github.com/beep-industries/crates" }
 tokio = { version = "1.48.0", features = ["macros", "rt-multi-thread"] }
 clap = { version = "4.5.51", features = ["derive", "env"] }
-axum = "0.8.6"
+axum = { version = "0.8.6", features = ["macros"] }
 dotenv = "0.15.0"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter", "json"] }
 tower-http = { version = "0.6.6", features = ["trace"] }
 tracing = "0.1.41"
 serde = "1.0.228"
+validator = { version = "0.20.0", features = ["derive"] }
+uuid = "1.19.0"

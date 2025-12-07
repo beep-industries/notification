@@ -1,27 +1,21 @@
 use core::{
-    application::{BeepService, create_service},
-    domain::Config,
+    application::{create_service, services::ApplicationService},
+    domain::{Config, CoreError},
 };
 use std::sync::Arc;
-
-use beep_server::ApiError;
 
 use crate::args::Args;
 
 #[derive(Clone)]
 pub struct AppState {
     pub args: Arc<Args>,
-    pub service: BeepService,
+    pub service: ApplicationService,
 }
 
-pub async fn state(args: Arc<Args>) -> Result<AppState, ApiError> {
+pub async fn state(args: Arc<Args>) -> Result<AppState, CoreError> {
     let config: Config = args.as_ref().clone().into();
 
-    let service = create_service(config)
-        .await
-        .map_err(|e| ApiError::Unknown {
-            message: e.to_string(),
-        })?;
+    let service = create_service(config).await?;
 
     Ok(AppState { args, service })
 }

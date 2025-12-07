@@ -4,6 +4,7 @@ use beep_server::{
     args::{ServerArgs, auth::AuthArgs, log::LogArgs},
     config::AuthConfig,
 };
+use core::domain::DatabaseConfig;
 use clap::Parser;
 
 #[derive(Debug, Clone, Parser)]
@@ -16,6 +17,9 @@ pub struct Args {
 
     #[command(flatten)]
     pub server: ServerArgs,
+
+    #[command(flatten)]
+    pub database: DatabaseArgs,
 }
 
 impl From<Args> for Config {
@@ -26,6 +30,15 @@ impl From<Args> for Config {
                 client_secret: value.auth.client_secret,
                 issuer: value.auth.issuer,
             },
+            database: DatabaseConfig {
+                database_url: value.database.database_url,
+            }
         }
     }
+}
+
+#[derive(Debug, Clone, Parser)]
+pub struct DatabaseArgs {
+    #[arg(env = "DATABASE_URL")]
+    pub database_url: String,
 }
