@@ -22,3 +22,5 @@ tracing = "0.1.41"
 serde = "1.0.228"
 validator = { version = "0.20.0", features = ["derive"] }
 uuid = "1.19.0"
+lapin = "3.7.2"
+futures-lite = "2.6.1"

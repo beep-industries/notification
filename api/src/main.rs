@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use beep_server::{args::log::LogArgs, get_addr, run_server};
 use clap::Parser;
+use tokio::{spawn, try_join};
 use tracing_subscriber::EnvFilter;
 
 use crate::{args::Args, router::router, state::state};
@@ -38,13 +39,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app_state = state(args.clone()).await?;
 
-    let router = router(app_state)?;
+    // let consumers = consumers(app_state.clone())?;
+
+    // let consumer_handle = spawn(async move {
+    //     if let Err(e) = start_consumers(&rabbitmq_args).await {
+    //         eprintln!("RabbitMQ consumers error: {:?}", e);
+    //     }
+    // });
+
+    let router = router(app_state.clone())?;
 
     let addr = get_addr(&args.server.host, args.server.port)
         .await
         .expect("failed to get socket address");
 
-    run_server(addr, router).await;
+    let server_handle = spawn(async move {
+        run_server(addr, router).await;
+    });
 
+    // try_join!(consumers_handle, server_handle)?;
     Ok(())
 }

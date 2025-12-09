@@ -44,6 +44,16 @@ pub struct DatabaseConfig {
     pub database_url: String,
 }
 
+pub struct QueueBinding {
+    pub queue_name: String,
+    pub exchange_name: String,
+}
+
+pub struct RabbitmqConfig {
+    pub rabbitmq_url: String,
+    pub rabbitmq_bindings: Vec<QueueBinding>,
+}
+
 pub fn generate_id() -> Uuid {
     let now = Utc::now();
     let seconds = now.timestamp().try_into().unwrap_or(0);
