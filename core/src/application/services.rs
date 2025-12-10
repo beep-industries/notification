@@ -7,7 +7,8 @@ use crate::{
     domain::{
         CoreError,
         entities::{notification::Notification, preference::NotificationPreference},
-        ports::notification::NotificationService, services::notification::NotificationServiceImpl,
+        ports::{broker::BrokerService, notification::NotificationService},
+        services::{broker::BrokerServiceImpl, notification::NotificationServiceImpl},
     },
     infrastructure::repositories::notification::PostgresNotificationRepository,
 };
@@ -22,7 +23,6 @@ impl HasAuthRepository for ApplicationService {
         &self.auth_repository
     }
 }
-
 #[derive(Clone)]
 pub struct ApplicationService {
     pub auth_repository: AuthRepo,
@@ -68,8 +68,8 @@ impl NotificationService for ApplicationService {
     }
 }
 
-impl BrokerServiceImpl<NotifRepo> for ApplicationService {
-    fn start_consumers(&self) -> impl Future<Output = Result<(), CoreError>> + Send {
-        self.broker_service.consume_messages()
+impl BrokerService for ApplicationService {
+    fn start_consumers(&self) -> impl Future<Output = Result<(), CoreError>> {
+        self.broker_service.start_consumers()
     }
 }

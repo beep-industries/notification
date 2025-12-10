@@ -42,17 +42,22 @@ pub enum CoreError {
 
     #[error("Create queue failed: {message}")]
     FailedCreateQueue { message: String  },
+
+    #[error("Bind queue failed: {message}")]
+    FailedBindQueue { message: String  },
 }
 
 pub struct Config {
     pub auth: AuthConfig,
     pub database: DatabaseConfig,
+    pub broker: BrokerConfig,
 }
 
 pub struct DatabaseConfig {
     pub database_url: String,
 }
 
+#[derive(Debug, Clone)]
 pub struct QueueBinding {
     pub queue_name: String,
     pub exchange_name: String,

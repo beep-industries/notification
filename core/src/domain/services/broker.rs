@@ -7,7 +7,7 @@ use crate::domain::{
         events::CreateMessageEvent,
         notification::{InsertNotificationInput, NotificationType},
     },
-    ports::notification::NotificationRepository,
+    ports::{broker::BrokerService, notification::NotificationRepository},
 };
 use futures_util::StreamExt;
 use lapin::{
@@ -19,10 +19,11 @@ use lapin::{
 use tracing::{error, info};
 use uuid::Uuid;
 
+#[derive(Clone)]
 pub struct BrokerServiceImpl<N> {
     pub notification_repository: N,
     pub config: Arc<BrokerConfig>,
-    pub connection: Connection,
+    pub connection: Arc<Connection>,
 }
 
 impl<N> BrokerServiceImpl<N>
@@ -34,7 +35,7 @@ where
         config: Arc<BrokerConfig>,
     ) -> Result<Self, CoreError> {
         // Init the connection to broker
-        let connection =
+        let connection = Arc::new(
             Connection::connect(&config.broker_url, lapin::ConnectionProperties::default())
                 .await
                 .map_err(|e| {
@@ -42,7 +43,8 @@ where
                     CoreError::ServiceUnavailable {
                         service: "Broker Service".to_string(),
                     }
-                })?;
+                })?,
+        );
 
         Ok(Self {
             notification_repository,
@@ -52,15 +54,12 @@ where
     }
 }
 
-pub trait BrokerService {
-    fn start_consumers(&self) -> impl Future<Output = Result<(), CoreError>>;
-}
-
 impl<N> BrokerService for BrokerServiceImpl<N>
 where
     N: NotificationRepository + Clone + 'static,
 {
     async fn start_consumers(&self) -> Result<(), CoreError> {
+        let mut handles = Vec::new();
         let config = self.config.clone();
         for binding in &config.broker_bindings {
             // Create channel
@@ -80,7 +79,10 @@ where
                 )
                 .await
                 .map_err(|e| {
-                    error!("could not declare exchange : {} : {}", binding.exchange_name, e);
+                    error!(
+                        "could not declare exchange : {} : {}",
+                        binding.exchange_name, e
+                    );
                     CoreError::ServiceUnavailable {
                         service: "Broker Service".to_string(),
                     }
@@ -92,7 +94,12 @@ where
                     FieldTable::default(),
                 )
                 .await
-                .unwrap();
+                .map_err(|e| {
+                    error!("could not declare queue : {} : {}", binding.queue_name, e);
+                    CoreError::FailedCreateQueue {
+                        message: e.to_string(),
+                    }
+                })?;
             channel
                 .queue_bind(
                     &binding.queue_name,
@@ -102,14 +109,34 @@ where
                     FieldTable::default(),
                 )
                 .await
-                .unwrap();
+                .map_err(|e| {
+                    error!("could not bind queue : {} : {}", binding.queue_name, e);
+                    CoreError::FailedBindQueue {
+                        message: e.to_string(),
+                    }
+                })?;
             let queue_name = binding.queue_name.clone();
             let repo = self.notification_repository.clone();
             // Start consumer task
-            tokio::spawn(async move {
+            let handle = tokio::spawn(async move {
                 if let Err(e) = read_from_queue(repo, &channel, &queue_name).await {
                     error!("RabbitMQ consumers error: {:?}", e);
                 }
+            });
+            handles.push(handle);
+        }
+
+        for handle in handles {
+            handle.await.map_err(|e| {
+                error!("Consumer task panicked: {:?}", e);
+                CoreError::ServiceUnavailable {
+                    service: "Consumer crashed".to_string(),
+                }
+            })?;
+
+            error!("Consumer exited unexpectedly");
+            return Err(CoreError::ServiceUnavailable {
+                service: "Consumer exited".to_string(),
             });
         }
 
@@ -126,7 +153,7 @@ where
     N: NotificationRepository,
 {
     match queue_name {
-        "notification_create_queue" => {
+        "notifications.created.queue" => {
             // Create message handler
             let message: CreateMessageEvent =
                 serde_json::from_slice(&delivery.data).map_err(|e| {
@@ -137,13 +164,11 @@ where
                 })?;
 
             let input = InsertNotificationInput {
-                user_id: UserId(
-                    Uuid::parse_str(&message.author_id)
-                        .map_err(|_| CoreError::FailedGetNotification {
-                            message: "Invalid user ID format".to_string(),
-                        })?
-                        .into(),
-                ),
+                user_id: UserId(Uuid::parse_str(&message.author_id).map_err(|_| {
+                    CoreError::FailedGetNotification {
+                        message: "Invalid user ID format".to_string(),
+                    }
+                })?),
                 channel_id: ChannelId(Uuid::parse_str(&message.channel_id).map_err(|_| {
                     CoreError::FailedGetNotification {
                         message: "Invalid channel ID format".to_string(),
@@ -218,6 +243,7 @@ where
             }
             Err(e) => {
                 error!("Consumer error for queue {}: {:?}", queue_name, e);
+                break;
             }
         }
     }

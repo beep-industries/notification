@@ -1,10 +1,9 @@
+use crate::domain::{
+    entities::{ChannelId, NotificationId, UserId},
+    generate_id,
+};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-
-use crate::domain::{
-    CoreError, entities::{ChannelId, NotificationId, UserId, events::CreateMessageEvent}, generate_id
-};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum NotificationType {

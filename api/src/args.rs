@@ -1,16 +1,10 @@
-use core::domain::{
-    BrokerConfig, Config, CoreError,
-    entities::events::{Attachment, NotifyEntry},
-};
-use std::{str::from_utf8, sync::Arc};
-
-use axum::http::header::Entry;
 use beep_server::{
     args::{ServerArgs, auth::AuthArgs, log::LogArgs},
     config::AuthConfig,
 };
 use clap::Parser;
 use core::domain::DatabaseConfig;
+use core::domain::{BrokerConfig, Config, QueueBinding};
 
 #[derive(Debug, Clone, Parser)]
 pub struct Args {
@@ -41,6 +35,10 @@ impl From<Args> for Config {
             database: DatabaseConfig {
                 database_url: value.database.database_url,
             },
+            broker: BrokerConfig {
+                broker_url: value.rabbitmq.rabbitmq_url,
+                broker_bindings: value.rabbitmq.rabbitmq_bindings,
+            },
         }
     }
 }
@@ -66,12 +64,6 @@ pub struct RabbitMQArgs {
         default_value = "notifications.created.queue:message_created,notifications.updated.queue:message_updated,notifications.deleted.queue:message_deleted"
     )]
     pub rabbitmq_bindings: Vec<QueueBinding>,
-}
-
-#[derive(Debug, Clone)]
-pub struct QueueBinding {
-    pub queue_name: String,
-    pub exchange_name: String,
 }
 
 fn parse_binding(s: &str) -> Result<QueueBinding, String> {
