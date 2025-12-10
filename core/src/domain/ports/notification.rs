@@ -37,7 +37,7 @@ pub trait NotificationService: Send + Sync {
     ) -> impl Future<Output = Result<(), CoreError>> + Send;
 }
 
-pub trait NotificationRepository: Send + Sync {
+pub trait NotificationRepository: Send + Sync { 
     fn insert(
         &self,
         input: InsertNotificationInput,

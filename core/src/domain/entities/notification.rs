@@ -1,9 +1,9 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::domain::{
-    entities::{ChannelId, NotificationId, UserId},
-    generate_id,
+    CoreError, entities::{ChannelId, NotificationId, UserId, events::CreateMessageEvent}, generate_id
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

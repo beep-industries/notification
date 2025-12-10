@@ -2,7 +2,7 @@ use beep_auth::infrastructure::keycloak_repository::KeycloakAuthRepository;
 
 use crate::{
     application::services::ApplicationService,
-    domain::{Config, CoreError, services::service::NotificationServiceImpl},
+    domain::{Config, CoreError, services::notification::NotificationServiceImpl},
     infrastructure::{
         db::postgres::{Postgres, PostgresConfig},
         repositories::notification::PostgresNotificationRepository,
@@ -23,6 +23,7 @@ pub async fn create_service(config: Config) -> Result<ApplicationService, CoreEr
     let app = ApplicationService {
         auth_repository: auth_repository,
         notification_service: NotificationServiceImpl::new(notification_repository),
+        broker_service: BrokerServiceImpl::new(notification_repository, config.broker.clone()).await?,
     };
 
     Ok(app)

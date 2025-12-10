@@ -33,6 +33,15 @@ pub enum CoreError {
 
     #[error("Unauthorized")]
     Unauthorized,
+
+    #[error("Failed to create channel: {message}")]
+    FailedCreateChannel { message: String },
+
+    #[error("Create exchange failed: {message}")]
+    FailedCreateExchange { message: String },
+
+    #[error("Create queue failed: {message}")]
+    FailedCreateQueue { message: String  },
 }
 
 pub struct Config {
@@ -49,9 +58,9 @@ pub struct QueueBinding {
     pub exchange_name: String,
 }
 
-pub struct RabbitmqConfig {
-    pub rabbitmq_url: String,
-    pub rabbitmq_bindings: Vec<QueueBinding>,
+pub struct BrokerConfig {
+    pub broker_url: String,
+    pub broker_bindings: Vec<QueueBinding>,
 }
 
 pub fn generate_id() -> Uuid {
