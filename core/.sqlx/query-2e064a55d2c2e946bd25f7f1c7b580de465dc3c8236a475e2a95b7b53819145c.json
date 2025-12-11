@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE notifications\n        SET \n            message = COALESCE($1, message),\n            metadata = metadata || $2::jsonb\n        WHERE message_id = $3\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Jsonb",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2e064a55d2c2e946bd25f7f1c7b580de465dc3c8236a475e2a95b7b53819145c"
+}

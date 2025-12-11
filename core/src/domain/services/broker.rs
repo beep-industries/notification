@@ -3,9 +3,9 @@ use std::sync::Arc;
 use crate::domain::{
     BrokerConfig, CoreError,
     entities::{
-        ChannelId, UserId,
-        events::CreateMessageEvent,
-        notification::{InsertNotificationInput, NotificationType},
+        ChannelId, NotificationId, UserId,
+        events::{CreateMessageEvent, DeleteMessageEvent, UpdateMessageEvent},
+        notification::{InsertNotificationInput, NotificationType, UpdateNotificationInput},
     },
     ports::{broker::BrokerService, notification::NotificationRepository},
 };
@@ -65,8 +65,8 @@ where
             // Create channel
             let channel = self.connection.create_channel().await.map_err(|e| {
                 error!("could not create channel : {}", e);
-                CoreError::ServiceUnavailable {
-                    service: "Broker Service".to_string(),
+                CoreError::FailedCreateChannel {
+                    message: (e.to_string()),
                 }
             })?;
             // Declare exchange and queue, and bind them
@@ -83,8 +83,8 @@ where
                         "could not declare exchange : {} : {}",
                         binding.exchange_name, e
                     );
-                    CoreError::ServiceUnavailable {
-                        service: "Broker Service".to_string(),
+                    CoreError::FailedCreateExchange {
+                        message: "Broker Service".to_string(),
                     }
                 })?;
             channel
@@ -129,13 +129,13 @@ where
         for handle in handles {
             handle.await.map_err(|e| {
                 error!("Consumer task panicked: {:?}", e);
-                CoreError::ServiceUnavailable {
+                CoreError::InternalError {
                     service: "Consumer crashed".to_string(),
                 }
             })?;
 
             error!("Consumer exited unexpectedly");
-            return Err(CoreError::ServiceUnavailable {
+            return Err(CoreError::InternalError {
                 service: "Consumer exited".to_string(),
             });
         }
@@ -154,51 +154,142 @@ where
 {
     match queue_name {
         "notifications.created.queue" => {
-            // Create message handler
-            let message: CreateMessageEvent =
-                serde_json::from_slice(&delivery.data).map_err(|e| {
-                    error!("Failed to deserialize message: {:?}", e);
-                    CoreError::ServiceUnavailable {
-                        service: "Broker Service".to_string(),
-                    }
-                })?;
-
-            let input = InsertNotificationInput {
-                user_id: UserId(Uuid::parse_str(&message.author_id).map_err(|_| {
-                    CoreError::FailedGetNotification {
-                        message: "Invalid user ID format".to_string(),
-                    }
-                })?),
-                channel_id: ChannelId(Uuid::parse_str(&message.channel_id).map_err(|_| {
-                    CoreError::FailedGetNotification {
-                        message: "Invalid channel ID format".to_string(),
-                    }
-                })?),
-                title: "New Message".to_string(), // TODO change
-                message: message.content,
-                notification_type: NotificationType::Info,
-                metadata: None,
-            };
-
-            notification_repository.insert(input).await?;
+            handle_create_message(delivery, notification_repository).await?;
 
             delivery
                 .ack(BasicAckOptions::default())
                 .await
                 .map_err(|e| {
                     error!("Failed to ack message: {:?}", e);
-                    CoreError::ServiceUnavailable {
-                        service: "Broker Service".to_string(),
+                    CoreError::AckError {
+                        message: "Broker Service".to_string(),
+                    }
+                })?;
+        }
+        "notifications.updated.queue" => {
+            handle_update_message(delivery, notification_repository).await?;
+
+            delivery
+                .ack(BasicAckOptions::default())
+                .await
+                .map_err(|e| {
+                    error!("Failed to ack message: {:?}", e);
+                    CoreError::AckError {
+                        message: "Broker Service".to_string(),
+                    }
+                })?;
+        }
+        "notifications.deleted.queue" => {
+            handle_delete_message(delivery, notification_repository).await?;
+            delivery
+                .ack(BasicAckOptions::default())
+                .await
+                .map_err(|e| {
+                    error!("Failed to ack message: {:?}", e);
+                    CoreError::AckError {
+                        message: "Broker Service".to_string(),
                     }
                 })?;
         }
         _ => {
             error!("No handler for queue: {}", queue_name);
-            return Err(CoreError::ServiceUnavailable {
-                service: "Broker Service".to_string(),
+            return Err(CoreError::UnsupportedHandler {
+                handler: queue_name.to_string(),
             });
         }
     }
+    Ok(())
+}
+
+async fn handle_create_message<N: NotificationRepository>(
+    delivery: &Delivery,
+    notification_repository: &N,
+) -> Result<(), CoreError> {
+    let message: CreateMessageEvent = serde_json::from_slice(&delivery.data).map_err(|e| {
+        error!("Failed to deserialize message: {:?}", e);
+        CoreError::DeserializeError {
+            message: format!("Failed to deserialize message: {}", e),
+        }
+    })?;
+    let input = InsertNotificationInput {
+        message_id: Some(NotificationId(
+            Uuid::parse_str(&message.message_id).map_err(|_| {
+                CoreError::FailedGetNotification {
+                    message: "Invalid message ID format".to_string(),
+                }
+            })?,
+        )),
+        friend_request_id: None,
+        user_id: UserId(Uuid::parse_str(&message.author_id).map_err(|_| {
+            CoreError::FailedGetNotification {
+                message: "Invalid user ID format".to_string(),
+            }
+        })?),
+        channel_id: ChannelId(Uuid::parse_str(&message.channel_id).map_err(|_| {
+            CoreError::FailedGetNotification {
+                message: "Invalid channel ID format".to_string(),
+            }
+        })?),
+        title: "New Message".to_string(),
+        message: message.content,
+        notification_type: NotificationType::Message,
+        // In metadata, we can store attachments, notify entries, is_pinned and reply_to_message_id as JSON
+        metadata: serde_json::json!({
+            "attachments": message.attachments,
+            "notify_entries": message.notify_entries,
+            "is_pinned": false,
+            "reply_to_message_id": message.reply_to_message_id,
+        })
+        .into(),
+    };
+    notification_repository.insert_message_notification(input).await?;
+    Ok(())
+}
+
+async fn handle_update_message<N: NotificationRepository>(
+    delivery: &Delivery,
+    notification_repository: &N,
+) -> Result<(), CoreError> {
+    let message: UpdateMessageEvent = serde_json::from_slice(&delivery.data).map_err(|e| {
+        error!("Failed to deserialize message: {:?}", e);
+        CoreError::DeserializeError {
+            message: format!("Failed to deserialize message: {}", e),
+        }
+    })?;
+    let input = UpdateNotificationInput {
+        message_id: Some(NotificationId(Uuid::parse_str(&message.message_id).map_err(|_| {
+            CoreError::FailedGetNotification {
+                message: "Invalid notification ID format".to_string(),
+            }
+        })?)),
+        friend_request_id: None,
+        message: message.content,
+        metadata: serde_json::json!({
+            "notify_entries": message.notify_entries,
+            "is_pinned": message.is_pinned,
+        })
+        .into(),
+    };
+    notification_repository.update_message_notification(input).await?;
+    Ok(())
+}
+
+async fn handle_delete_message<N: NotificationRepository>(
+    delivery: &Delivery,
+    notification_repository: &N,
+) -> Result<(), CoreError> {
+    let delete_message_event: DeleteMessageEvent = serde_json::from_slice(&delivery.data).map_err(|e| {
+        error!("Failed to deserialize message: {:?}", e);
+        CoreError::DeserializeError {
+            message: format!("Failed to deserialize message: {}", e),
+        }
+    })?;
+    let message_id = NotificationId(Uuid::parse_str(&delete_message_event.message_id).map_err(|_| {
+        CoreError::FailedGetNotification {
+            message: "Invalid notification ID format".to_string(),
+        }
+    })?);
+    notification_repository.delete_message_notification(message_id).await?;
     Ok(())
 }
 
@@ -218,8 +309,8 @@ where
         .await
         .map_err(|e| {
             error!("could not create consumer : {}", e);
-            CoreError::ServiceUnavailable {
-                service: "Broker Service".to_string(),
+            CoreError::FailedCreateConsumer {
+                message: format!("Failed to create consumer: {}", e),
             }
         })?;
     info!("Consumer created for queue {}", queue_name);

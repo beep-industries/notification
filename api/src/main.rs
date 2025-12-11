@@ -4,7 +4,7 @@ use beep_server::{args::log::LogArgs, get_addr, run_server};
 use clap::Parser;
 use core::domain::ports::broker::BrokerService;
 use tokio::{signal::ctrl_c, spawn};
-use tracing::error;
+use tracing::{error, info};
 
 use tracing_subscriber::EnvFilter;
 
@@ -61,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Graceful shutdown
     tokio::select! {
         _ = ctrl_c() => {
-            error!("Shutdown signal received");
+            info!("Shutdown signal received");
             Ok(())
         },
         result = consumers_handle => {

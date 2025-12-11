@@ -1,6 +1,8 @@
 -- Create notifications table
 CREATE TABLE notifications (
     id UUID PRIMARY KEY,
+    message_id UUID,
+    friend_request_id UUID,
     user_id UUID NOT NULL,
     channel_id UUID NOT NULL,
     title TEXT NOT NULL,

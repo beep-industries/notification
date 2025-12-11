@@ -4,7 +4,7 @@ use crate::domain::{
     CoreError,
     entities::{
         NotificationId, UserId,
-        notification::{InsertNotificationInput, Notification},
+        notification::{InsertNotificationInput, Notification, UpdateNotificationInput},
         preference::NotificationPreference,
     },
 };
@@ -37,11 +37,36 @@ pub trait NotificationService: Send + Sync {
     ) -> impl Future<Output = Result<(), CoreError>> + Send;
 }
 
-pub trait NotificationRepository: Send + Sync { 
+pub trait NotificationRepository: Send + Sync {
     fn insert(
         &self,
         input: InsertNotificationInput,
     ) -> impl Future<Output = Result<Notification, CoreError>> + Send;
+
+    fn insert_message_notification(
+        &self,
+        input: InsertNotificationInput,
+    ) -> impl Future<Output = Result<Notification, CoreError>> + Send;
+
+    fn update_message_notification(
+        &self,
+        input: UpdateNotificationInput,
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
+
+    fn update(
+        &self,
+        notification: UpdateNotificationInput,
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
+
+    fn delete_message_notification(
+        &self,
+        message_id: NotificationId,
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
+
+    fn delete(
+        &self,
+        notification_id: NotificationId,
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
 
     fn get_notifications_for_user(
         &self,

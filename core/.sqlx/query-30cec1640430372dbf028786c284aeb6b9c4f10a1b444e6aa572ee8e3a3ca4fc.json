@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT id, channel_id, user_id, title, message, notification_type, status, created_at, metadata, sent_at\n            FROM notifications\n            WHERE user_id = $1 and status = 'Sent'\n            ",
+  "query": "\n            SELECT id, message_id, friend_request_id, channel_id, user_id, title, message, notification_type, status, created_at, metadata, sent_at\n            FROM notifications\n            WHERE user_id = $1 and status = 'Sent'\n            ",
   "describe": {
     "columns": [
       {
@@ -10,46 +10,56 @@
       },
       {
         "ordinal": 1,
-        "name": "channel_id",
+        "name": "message_id",
         "type_info": "Uuid"
       },
       {
         "ordinal": 2,
-        "name": "user_id",
+        "name": "friend_request_id",
         "type_info": "Uuid"
       },
       {
         "ordinal": 3,
+        "name": "channel_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
         "name": "title",
         "type_info": "Text"
       },
       {
-        "ordinal": 4,
+        "ordinal": 6,
         "name": "message",
         "type_info": "Text"
       },
       {
-        "ordinal": 5,
+        "ordinal": 7,
         "name": "notification_type",
         "type_info": "Text"
       },
       {
-        "ordinal": 6,
+        "ordinal": 8,
         "name": "status",
         "type_info": "Text"
       },
       {
-        "ordinal": 7,
+        "ordinal": 9,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 8,
+        "ordinal": 10,
         "name": "metadata",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 9,
+        "ordinal": 11,
         "name": "sent_at",
         "type_info": "Timestamptz"
       }
@@ -61,6 +71,8 @@
     },
     "nullable": [
       false,
+      true,
+      true,
       false,
       false,
       false,
@@ -72,5 +84,5 @@
       true
     ]
   },
-  "hash": "2a1505f3779e4bf079eae3f6f323b37f1d0375ce7cd48fb5f1632225d8a5151e"
+  "hash": "30cec1640430372dbf028786c284aeb6b9c4f10a1b444e6aa572ee8e3a3ca4fc"
 }

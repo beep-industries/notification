@@ -7,10 +7,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum NotificationType {
-    Info,
-    Warning,
-    Error,
-    Success,
+    Friend,
+    Message,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -48,10 +46,8 @@ impl From<String> for NotificationStatus {
 impl std::fmt::Display for NotificationType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
-            NotificationType::Info => "info",
-            NotificationType::Warning => "warning",
-            NotificationType::Error => "error",
-            NotificationType::Success => "success",
+            NotificationType::Friend => "friend",
+            NotificationType::Message => "message",
         };
         write!(f, "{}", s)
     }
@@ -60,11 +56,9 @@ impl std::fmt::Display for NotificationType {
 impl From<String> for NotificationType {
     fn from(value: String) -> Self {
         match value.as_str() {
-            "info" => NotificationType::Info,
-            "warning" => NotificationType::Warning,
-            "error" => NotificationType::Error,
-            "success" => NotificationType::Success,
-            _ => NotificationType::Error,
+            "friend" => NotificationType::Friend,
+            "message" => NotificationType::Message,
+            _ => NotificationType::Message,
         }
     }
 }
@@ -72,6 +66,8 @@ impl From<String> for NotificationType {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Notification {
     pub id: NotificationId,
+    pub message_id: Option<NotificationId>,
+    pub friend_request_id: Option<NotificationId>,
     pub user_id: UserId,
     pub channel_id: ChannelId,
     pub title: String,
@@ -89,6 +85,8 @@ impl From<InsertNotificationInput> for Notification {
         let now = Utc::now();
         Self {
             id: NotificationId(generate_id()),
+            message_id: value.message_id,
+            friend_request_id: value.friend_request_id,
             channel_id: value.channel_id,
             user_id: value.user_id,
             title: value.title,
@@ -104,10 +102,19 @@ impl From<InsertNotificationInput> for Notification {
 }
 
 pub struct InsertNotificationInput {
+    pub message_id: Option<NotificationId>,
+    pub friend_request_id: Option<NotificationId>,
     pub user_id: UserId,
     pub channel_id: ChannelId,
     pub title: String,
     pub message: String,
     pub notification_type: NotificationType,
+    pub metadata: Option<serde_json::Value>,
+}
+
+pub struct UpdateNotificationInput {
+    pub message_id: Option<NotificationId>,
+    pub friend_request_id: Option<NotificationId>,
+    pub message: String,
     pub metadata: Option<serde_json::Value>,
 }
