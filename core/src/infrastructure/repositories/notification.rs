@@ -6,9 +6,7 @@ use uuid::Uuid;
 use crate::domain::{
     CoreError,
     entities::{
-        UserId,
-        notification::{InsertNotificationInput, Notification},
-        preference::NotificationPreference,
+        NotificationId, UserId, notification::{InsertNotificationInput, Notification, UpdateNotificationInput}, preference::NotificationPreference
     },
     ports::notification::NotificationRepository,
 };
@@ -25,19 +23,34 @@ impl PostgresNotificationRepository {
 }
 
 impl NotificationRepository for PostgresNotificationRepository {
+    #[allow(unused)]
     async fn insert(&self, input: InsertNotificationInput) -> Result<Notification, CoreError> {
-        let notification: Notification = input.into();
+        unimplemented!()
+    }
 
+    async fn insert_message_notification(&self, input: InsertNotificationInput) -> Result<Notification, CoreError> {
+        let notification: Notification = input.into();
+        let message_id: Uuid;
+        match notification.message_id {
+            None => {
+                return Err(CoreError::FailedInsertNotification {
+                    message: "message_id must be provided for message notifications".to_string(),
+                });
+            }
+            Some(id) => {message_id = id.into()}
+        }
+        
         let user_id: Uuid = notification.user_id.into();
         let channel_id: Uuid = notification.channel_id.into();
         let notification_id: Uuid = notification.id.into();
 
         sqlx::query!(
             r#"
-            INSERT INTO notifications (id, channel_id, user_id, title, message, notification_type, status, created_at, metadata)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            INSERT INTO notifications (id, message_id, channel_id, user_id, title, message, notification_type, status, created_at, metadata)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             "#,
             notification_id,
+            message_id,
             channel_id,
             user_id,
             notification.title,
@@ -56,6 +69,83 @@ impl NotificationRepository for PostgresNotificationRepository {
         Ok(notification)
     }
 
+    async fn update_message_notification(&self, input: UpdateNotificationInput) -> Result<(), CoreError> {
+        let message_id: Uuid;
+        match input.message_id {
+            None => {
+                return Err(CoreError::FailedUpdateNotification {
+                    message: "message_id must be provided for message notifications".to_string(),
+                });
+            }
+            Some(id) => {message_id = id.into()}
+        }
+        
+        let result = sqlx::query!(
+            r#"
+        UPDATE notifications
+        SET 
+            message = COALESCE($1, message),
+            metadata = metadata || $2::jsonb
+        WHERE message_id = $3
+        "#,
+            input.message,
+            input.metadata,
+            message_id
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| CoreError::FailedUpdateNotification {
+            message: e.to_string(),
+        })?;
+
+        if result.rows_affected() == 0 {
+            return Err(CoreError::FailedUpdateNotification {
+                message: "notification not found".to_string(),
+            });
+        }
+        Ok(())
+    }
+
+    #[allow(unused)]
+    async fn update(&self, input: UpdateNotificationInput) -> Result<(), CoreError> {
+        unimplemented!()
+    }
+
+    async fn delete_message_notification(
+        &self,
+        message_id: NotificationId,
+    ) -> Result<(), CoreError> {
+        let message_id: Uuid = message_id.into();
+        let result = sqlx::query!(
+            r#"
+            DELETE FROM notifications
+            WHERE message_id = $1
+            "#,
+            message_id,
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| CoreError::FailedDeleteNotification {
+            message: e.to_string(),
+        })?;
+
+        if result.rows_affected() == 0 {
+            return Err(CoreError::FailedDeleteNotification {
+                message: "notification not found".to_string(),
+            });
+        }
+
+        Ok(())
+    }
+
+    #[allow(unused)]
+    async fn delete(
+        &self,
+        notification_id: crate::domain::entities::NotificationId,
+    ) -> Result<(), CoreError> {
+        unimplemented!()
+    }
+
     async fn get_notifications_for_user(
         &self,
         user_id: UserId,
@@ -64,7 +154,7 @@ impl NotificationRepository for PostgresNotificationRepository {
 
         let records = sqlx::query!(
             r#"
-            SELECT id, channel_id, user_id, title, message, notification_type, status, created_at, metadata, sent_at
+            SELECT id, message_id, friend_request_id, channel_id, user_id, title, message, notification_type, status, created_at, metadata, sent_at
             FROM notifications
             WHERE user_id = $1 and status = 'Sent'
             "#,
@@ -78,8 +168,20 @@ impl NotificationRepository for PostgresNotificationRepository {
 
         let notifications = records
             .into_iter()
-            .map(|record| Notification {
+            .map(|record| {
+                let message_id: Option<NotificationId> = match record.message_id {
+                    None => None,
+                    Some(id) => Some(id.into()),
+                };
+
+                let friend_request_id: Option<NotificationId> = match record.friend_request_id {
+                    None => None,
+                    Some(id) => Some(id.into()),
+                };
+                Notification {
                 id: record.id.into(),
+                message_id: message_id,
+                friend_request_id: friend_request_id,
                 channel_id: record.channel_id.into(),
                 user_id: record.user_id.into(),
                 title: record.title,
@@ -90,7 +192,7 @@ impl NotificationRepository for PostgresNotificationRepository {
                 metadata: record.metadata,
                 sent_at: record.sent_at,
                 read_at: None,
-            })
+            }})
             .collect();
 
         Ok(notifications)

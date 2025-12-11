@@ -64,6 +64,10 @@ impl From<CoreError> for ApiError {
                 error!("Unauthorized access");
                 Self::Unauthorized
             },
+            _ => {
+                error!("Unhandled core error: {:?}", error);
+                Self::ServiceUnavailable
+            }
         }
     }
 }

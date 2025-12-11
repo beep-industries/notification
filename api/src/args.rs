@@ -1,11 +1,10 @@
-use core::domain::Config;
-
 use beep_server::{
     args::{ServerArgs, auth::AuthArgs, log::LogArgs},
     config::AuthConfig,
 };
-use core::domain::DatabaseConfig;
 use clap::Parser;
+use core::domain::DatabaseConfig;
+use core::domain::{BrokerConfig, Config, QueueBinding};
 
 #[derive(Debug, Clone, Parser)]
 pub struct Args {
@@ -20,6 +19,9 @@ pub struct Args {
 
     #[command(flatten)]
     pub database: DatabaseArgs,
+
+    #[command(flatten)]
+    pub rabbitmq: RabbitMQArgs,
 }
 
 impl From<Args> for Config {
@@ -32,7 +34,11 @@ impl From<Args> for Config {
             },
             database: DatabaseConfig {
                 database_url: value.database.database_url,
-            }
+            },
+            broker: BrokerConfig {
+                broker_url: value.rabbitmq.rabbitmq_url,
+                broker_bindings: value.rabbitmq.rabbitmq_bindings,
+            },
         }
     }
 }
@@ -41,4 +47,37 @@ impl From<Args> for Config {
 pub struct DatabaseArgs {
     #[arg(env = "DATABASE_URL")]
     pub database_url: String,
+}
+
+// Parse a url and a list of RabbitMQ exchanges
+#[derive(Debug, Clone, Parser)]
+pub struct RabbitMQArgs {
+    #[arg(
+        env = "RABBITMQ_URL",
+        default_value = "amqp://guest:guest@localhost:5672/%2f"
+    )]
+    pub rabbitmq_url: String,
+    #[arg(
+        env = "RABBITMQ_BINDINGS",
+        value_delimiter = ',',
+        value_parser = parse_binding,
+        default_value = "notifications.created.queue:message_created,notifications.updated.queue:message_updated,notifications.deleted.queue:message_deleted"
+    )]
+    pub rabbitmq_bindings: Vec<QueueBinding>,
+}
+
+fn parse_binding(s: &str) -> Result<QueueBinding, String> {
+    let parts: Vec<&str> = s.split(':').collect();
+
+    if parts.len() != 2 {
+        return Err(format!(
+            "Invalid binding format: '{}'. Expected 'queue:exchange'",
+            s
+        ));
+    }
+
+    Ok(QueueBinding {
+        queue_name: parts[0].to_string(),
+        exchange_name: parts[1].to_string(),
+    })
 }
