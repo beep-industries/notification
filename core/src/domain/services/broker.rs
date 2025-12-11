@@ -33,19 +33,8 @@ where
     pub async fn new(
         notification_repository: N,
         config: Arc<BrokerConfig>,
+        connection: Arc<Connection>,
     ) -> Result<Self, CoreError> {
-        // Init the connection to broker
-        let connection = Arc::new(
-            Connection::connect(&config.broker_url, lapin::ConnectionProperties::default())
-                .await
-                .map_err(|e| {
-                    error!("could not connect to broker : {}", e);
-                    CoreError::ServiceUnavailable {
-                        service: "Broker Service".to_string(),
-                    }
-                })?,
-        );
-
         Ok(Self {
             notification_repository,
             config,
@@ -115,6 +104,7 @@ where
                         message: e.to_string(),
                     }
                 })?;
+
             let queue_name = binding.queue_name.clone();
             let repo = self.notification_repository.clone();
             // Start consumer task
@@ -213,10 +203,8 @@ async fn handle_create_message<N: NotificationRepository>(
     })?;
     let input = InsertNotificationInput {
         message_id: Some(NotificationId(
-            Uuid::parse_str(&message.message_id).map_err(|_| {
-                CoreError::FailedGetNotification {
-                    message: "Invalid message ID format".to_string(),
-                }
+            Uuid::parse_str(&message.message_id).map_err(|_| CoreError::FailedGetNotification {
+                message: "Invalid message ID format".to_string(),
             })?,
         )),
         friend_request_id: None,
@@ -242,7 +230,9 @@ async fn handle_create_message<N: NotificationRepository>(
         })
         .into(),
     };
-    notification_repository.insert_message_notification(input).await?;
+    notification_repository
+        .insert_message_notification(input)
+        .await?;
     Ok(())
 }
 
@@ -257,11 +247,11 @@ async fn handle_update_message<N: NotificationRepository>(
         }
     })?;
     let input = UpdateNotificationInput {
-        message_id: Some(NotificationId(Uuid::parse_str(&message.message_id).map_err(|_| {
-            CoreError::FailedGetNotification {
+        message_id: Some(NotificationId(
+            Uuid::parse_str(&message.message_id).map_err(|_| CoreError::FailedGetNotification {
                 message: "Invalid notification ID format".to_string(),
-            }
-        })?)),
+            })?,
+        )),
         friend_request_id: None,
         message: message.content,
         metadata: serde_json::json!({
@@ -270,7 +260,9 @@ async fn handle_update_message<N: NotificationRepository>(
         })
         .into(),
     };
-    notification_repository.update_message_notification(input).await?;
+    notification_repository
+        .update_message_notification(input)
+        .await?;
     Ok(())
 }
 
@@ -278,18 +270,21 @@ async fn handle_delete_message<N: NotificationRepository>(
     delivery: &Delivery,
     notification_repository: &N,
 ) -> Result<(), CoreError> {
-    let delete_message_event: DeleteMessageEvent = serde_json::from_slice(&delivery.data).map_err(|e| {
-        error!("Failed to deserialize message: {:?}", e);
-        CoreError::DeserializeError {
-            message: format!("Failed to deserialize message: {}", e),
-        }
-    })?;
-    let message_id = NotificationId(Uuid::parse_str(&delete_message_event.message_id).map_err(|_| {
-        CoreError::FailedGetNotification {
+    let delete_message_event: DeleteMessageEvent =
+        serde_json::from_slice(&delivery.data).map_err(|e| {
+            error!("Failed to deserialize message: {:?}", e);
+            CoreError::DeserializeError {
+                message: format!("Failed to deserialize message: {}", e),
+            }
+        })?;
+    let message_id = NotificationId(Uuid::parse_str(&delete_message_event.message_id).map_err(
+        |_| CoreError::FailedGetNotification {
             message: "Invalid notification ID format".to_string(),
-        }
-    })?);
-    notification_repository.delete_message_notification(message_id).await?;
+        },
+    )?);
+    notification_repository
+        .delete_message_notification(message_id)
+        .await?;
     Ok(())
 }
 

@@ -54,7 +54,7 @@ In message_updated :
 ```bash
 
 {
-  "message_id": "123e4567-e89b-12d3-a456-426614174000",
+  "message_id": "223e4567-e89b-12d3-a456-426614174001",
   "content": "Updated message content!",
   "is_pinned": true,
   "notify_entries": [
@@ -72,7 +72,7 @@ in message_deleted:
 ```bash
 
 {
-  "message_id": "123e4567-e89b-12d3-a456-426614174000"
+  "message_id": "223e4567-e89b-12d3-a456-426614174001"
 }
 
 ```

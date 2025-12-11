@@ -6,8 +6,7 @@ use crate::{
     application::services::ApplicationService,
     domain::{Config, CoreError, services::{broker::BrokerServiceImpl, notification::NotificationServiceImpl}},
     infrastructure::{
-        db::postgres::{Postgres, PostgresConfig},
-        repositories::notification::PostgresNotificationRepository,
+        broker::rabbitmq::{RabbitMQ, RabbitMQConfig}, db::postgres::{Postgres, PostgresConfig}, repositories::notification::PostgresNotificationRepository
     },
 };
 
@@ -19,13 +18,16 @@ pub async fn create_service(config: Config) -> Result<ApplicationService, CoreEr
         database_url: config.database.database_url.clone(),
     })
     .await?;
+    let rabbit_mq: RabbitMQ = RabbitMQ::new(RabbitMQConfig {
+        broker_url: config.broker.broker_url.clone(),
+    }).await?;
     let auth_repository = KeycloakAuthRepository::new(&config.auth.issuer, None);
     let notification_repository = PostgresNotificationRepository::new(postgres.get_db());
 
     let app = ApplicationService {
         auth_repository: auth_repository,
         notification_service: NotificationServiceImpl::new(notification_repository.clone()),
-        broker_service: BrokerServiceImpl::new(notification_repository, Arc::new(config.broker)).await?,
+        broker_service: BrokerServiceImpl::new(notification_repository, Arc::new(config.broker), rabbit_mq.get_connection()).await?,
     };
 
     Ok(app)
