@@ -13,7 +13,7 @@ pub struct Attachment {
     pub url: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct CreateMessageEvent {
     pub message_id: String,
     pub channel_id: String,
@@ -24,7 +24,7 @@ pub struct CreateMessageEvent {
     pub notify_entries: Vec<NotifyEntry>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct UpdateMessageEvent {
     pub message_id: String,
     pub content: String,
@@ -32,7 +32,22 @@ pub struct UpdateMessageEvent {
     pub notify_entries: Vec<NotifyEntry>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct DeleteMessageEvent {
     pub message_id: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct FriendRequestCreatedEvent {
+    // TODO complete
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct FriendRequestAcceptedEvent {
+    // TODO complete
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct FriendRequestDeclinedEvent {
+    // TODO complete
 }

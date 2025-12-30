@@ -6,7 +6,9 @@ use uuid::Uuid;
 use crate::domain::{
     CoreError,
     entities::{
-        NotificationId, UserId, notification::{InsertNotificationInput, Notification, UpdateNotificationInput}, preference::NotificationPreference
+        NotificationId, UserId,
+        notification::{InsertNotificationInput, Notification, UpdateNotificationInput},
+        preference::NotificationPreference,
     },
     ports::notification::NotificationRepository,
 };
@@ -28,7 +30,10 @@ impl NotificationRepository for PostgresNotificationRepository {
         unimplemented!()
     }
 
-    async fn insert_message_notification(&self, input: InsertNotificationInput) -> Result<Notification, CoreError> {
+    async fn insert_message_notification(
+        &self,
+        input: InsertNotificationInput,
+    ) -> Result<Notification, CoreError> {
         let notification: Notification = input.into();
         let message_id: Uuid;
         match notification.message_id {
@@ -37,9 +42,9 @@ impl NotificationRepository for PostgresNotificationRepository {
                     message: "message_id must be provided for message notifications".to_string(),
                 });
             }
-            Some(id) => {message_id = id.into()}
+            Some(id) => message_id = id.into(),
         }
-        
+
         let user_id: Uuid = notification.user_id.into();
         let channel_id: Uuid = notification.channel_id.into();
         let notification_id: Uuid = notification.id.into();
@@ -69,7 +74,10 @@ impl NotificationRepository for PostgresNotificationRepository {
         Ok(notification)
     }
 
-    async fn update_message_notification(&self, input: UpdateNotificationInput) -> Result<(), CoreError> {
+    async fn update_message_notification(
+        &self,
+        input: UpdateNotificationInput,
+    ) -> Result<(), CoreError> {
         let message_id: Uuid;
         match input.message_id {
             None => {
@@ -77,9 +85,9 @@ impl NotificationRepository for PostgresNotificationRepository {
                     message: "message_id must be provided for message notifications".to_string(),
                 });
             }
-            Some(id) => {message_id = id.into()}
+            Some(id) => message_id = id.into(),
         }
-        
+
         let result = sqlx::query!(
             r#"
         UPDATE notifications
@@ -138,6 +146,13 @@ impl NotificationRepository for PostgresNotificationRepository {
         Ok(())
     }
 
+    async fn delete_friend_request_notification(
+        &self,
+        _friend_request_id: NotificationId,
+    ) -> Result<(), CoreError> {
+        unimplemented!("Friend request notification deletion not yet implemented")
+    }
+
     #[allow(unused)]
     async fn delete(
         &self,
@@ -179,20 +194,21 @@ impl NotificationRepository for PostgresNotificationRepository {
                     Some(id) => Some(id.into()),
                 };
                 Notification {
-                id: record.id.into(),
-                message_id: message_id,
-                friend_request_id: friend_request_id,
-                channel_id: record.channel_id.into(),
-                user_id: record.user_id.into(),
-                title: record.title,
-                message: record.message,
-                notification_type: record.notification_type.into(),
-                status: record.status.into(),
-                created_at: record.created_at,
-                metadata: record.metadata,
-                sent_at: record.sent_at,
-                read_at: None,
-            }})
+                    id: record.id.into(),
+                    message_id: message_id,
+                    friend_request_id: friend_request_id,
+                    channel_id: record.channel_id.into(),
+                    user_id: record.user_id.into(),
+                    title: record.title,
+                    message: record.message,
+                    notification_type: record.notification_type.into(),
+                    status: record.status.into(),
+                    created_at: record.created_at,
+                    metadata: record.metadata,
+                    sent_at: record.sent_at,
+                    read_at: None,
+                }
+            })
             .collect();
 
         Ok(notifications)

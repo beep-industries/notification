@@ -5,6 +5,9 @@ pub mod events;
 pub mod notification;
 pub mod preference;
 
+#[cfg(test)]
+mod events_tests;
+
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct UserId(pub Uuid);
 

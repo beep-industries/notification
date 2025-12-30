@@ -1,4 +1,8 @@
-use axum::{Json, http::StatusCode, response::{IntoResponse, Response}};
+use axum::{
+    Json,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
 use beep_server::ApiErrorResponse;
 use thiserror::Error;
 use tracing::error;
@@ -35,35 +39,35 @@ impl From<CoreError> for ApiError {
             CoreError::FailedGetNotification { message } => {
                 error!("Failed to get notification: {}", message);
                 Self::NotificationNotFound
-            },
+            }
             CoreError::FailedInsertNotification { message } => {
                 error!("Failed to insert notification: {}", message);
                 Self::NotificationInsertionFailed
-            },
+            }
             CoreError::ServiceUnavailable { service } => {
                 error!("Service unavailable: {}", service);
                 Self::ServiceUnavailable
-            },
+            }
             CoreError::PreferenceNotFound => {
                 error!("Preference not found");
                 Self::PreferenceNotFound
-            },
+            }
             CoreError::FailedMarkNotificationAsRead { message } => {
                 error!("Failed to mark notification as read: {}", message);
                 Self::MarkAsReadFailed
-            },
+            }
             CoreError::FailedGetPreferences { message } => {
                 error!("Failed to get preferences: {}", message);
                 Self::PreferenceNotFound
-            },
+            }
             CoreError::FailedUpdatePreferences { message } => {
                 error!("Failed to update preferences: {}", message);
                 Self::PreferenceUpdateFailed
-            },
+            }
             CoreError::Unauthorized => {
                 error!("Unauthorized access");
                 Self::Unauthorized
-            },
+            }
             _ => {
                 error!("Unhandled core error: {:?}", error);
                 Self::ServiceUnavailable
@@ -83,7 +87,8 @@ impl IntoResponse for ApiError {
                     status: StatusCode::NOT_FOUND.as_u16(),
                     message: "Notification not found".to_string(),
                 }),
-            ).into_response(),
+            )
+                .into_response(),
             ApiError::NotificationInsertionFailed => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ApiErrorResponse {
@@ -91,7 +96,8 @@ impl IntoResponse for ApiError {
                     status: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
                     message: "Failed to insert notification".to_string(),
                 }),
-            ).into_response(),
+            )
+                .into_response(),
             ApiError::PreferenceNotFound => (
                 StatusCode::NOT_FOUND,
                 Json(ApiErrorResponse {
@@ -99,7 +105,8 @@ impl IntoResponse for ApiError {
                     status: StatusCode::NOT_FOUND.as_u16(),
                     message: "Preference not found".to_string(),
                 }),
-            ).into_response(),
+            )
+                .into_response(),
             ApiError::PreferenceUpdateFailed => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ApiErrorResponse {
@@ -107,7 +114,8 @@ impl IntoResponse for ApiError {
                     status: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
                     message: "Failed to update preferences".to_string(),
                 }),
-            ).into_response(),
+            )
+                .into_response(),
             ApiError::MarkAsReadFailed => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ApiErrorResponse {
@@ -115,7 +123,8 @@ impl IntoResponse for ApiError {
                     status: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
                     message: "Failed to mark notification as read".to_string(),
                 }),
-            ).into_response(),
+            )
+                .into_response(),
             ApiError::BadRequest { message } => (
                 StatusCode::BAD_REQUEST,
                 Json(ApiErrorResponse {
@@ -123,7 +132,8 @@ impl IntoResponse for ApiError {
                     status: StatusCode::BAD_REQUEST.as_u16(),
                     message,
                 }),
-            ).into_response(),
+            )
+                .into_response(),
             ApiError::ServiceUnavailable => (
                 StatusCode::SERVICE_UNAVAILABLE,
                 Json(ApiErrorResponse {
@@ -131,7 +141,8 @@ impl IntoResponse for ApiError {
                     status: StatusCode::SERVICE_UNAVAILABLE.as_u16(),
                     message: "Service unavailable".to_string(),
                 }),
-            ).into_response(),
+            )
+                .into_response(),
             ApiError::Unauthorized => (
                 StatusCode::UNAUTHORIZED,
                 Json(ApiErrorResponse {
@@ -139,7 +150,8 @@ impl IntoResponse for ApiError {
                     status: StatusCode::UNAUTHORIZED.as_u16(),
                     message: "Unauthorized".to_string(),
                 }),
-            ).into_response(),
+            )
+                .into_response(),
             ApiError::ValidationError { message } => (
                 StatusCode::BAD_REQUEST,
                 Json(ApiErrorResponse {
@@ -147,7 +159,8 @@ impl IntoResponse for ApiError {
                     status: StatusCode::BAD_REQUEST.as_u16(),
                     message,
                 }),
-            ).into_response(),
+            )
+                .into_response(),
         }
     }
 }

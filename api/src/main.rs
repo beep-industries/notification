@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use beep_server::{args::log::LogArgs, get_addr, run_server};
 use clap::Parser;
-use core::domain::ports::broker::BrokerService;
-use tokio::{signal::ctrl_c, spawn};
+use tokio::signal::ctrl_c;
 use tracing::{error, info};
 
 use tracing_subscriber::EnvFilter;
@@ -40,21 +39,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Arc::new(Args::parse());
     init_logger(&args.log);
 
-    let app_state = Arc::new(state(args.clone()).await?);
+    let app_state = state(args.clone()).await?;
 
-    let app_state_consumers = app_state.clone();
-    let consumers_handle =
-        spawn(async move { app_state_consumers.service.start_consumers().await });
+    // Spawn consumers : broker_service internals are cloned here
+    let consumers_handle = app_state.service.spawn_consumers();
 
-    let app_state_for_router = (*app_state).clone();
-
-    let router = router(app_state_for_router)?;
+    let router = router(app_state)?;
 
     let addr = get_addr(&args.server.host, args.server.port)
         .await
         .expect("failed to get socket address");
 
-    let server_handle = spawn(async move {
+    let server_handle = tokio::spawn(async move {
         run_server(addr, router).await;
     });
 

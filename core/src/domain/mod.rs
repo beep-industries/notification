@@ -47,13 +47,13 @@ pub enum CoreError {
     FailedCreateExchange { message: String },
 
     #[error("Create queue failed: {message}")]
-    FailedCreateQueue { message: String  },
+    FailedCreateQueue { message: String },
 
     #[error("Bind queue failed: {message}")]
-    FailedBindQueue { message: String  },
+    FailedBindQueue { message: String },
 
     #[error("Internal error: {service}")]
-    InternalError { service: String  },
+    InternalError { service: String },
 
     #[error("Ack error: {message}")]
     AckError { message: String },
@@ -62,10 +62,10 @@ pub enum CoreError {
     UnsupportedHandler { handler: String },
 
     #[error("Deserialize error: {message}")]
-    DeserializeError { message: String  },
+    DeserializeError { message: String },
 
     #[error("Failed to get create consumer: {message}")]
-    FailedCreateConsumer { message: String  },
+    FailedCreateConsumer { message: String },
 }
 
 pub struct Config {
