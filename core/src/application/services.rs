@@ -4,7 +4,7 @@ use beep_auth::{
     domain::{models::Identity, ports::HasAuthRepository},
     infrastructure::keycloak_repository::KeycloakAuthRepository,
 };
-use tokio::task::JoinHandle;
+use tokio::{spawn, task::JoinHandle};
 
 use crate::{
     domain::{
@@ -88,6 +88,6 @@ impl BrokerService for ApplicationService {
 impl ApplicationService {
     pub fn spawn_consumers(&self) -> JoinHandle<Result<(), CoreError>> {
         let broker = Arc::clone(&self.broker_service);
-        tokio::spawn(async move { broker.start_consumers().await })
+        spawn(async move { broker.start_consumers().await })
     }
 }

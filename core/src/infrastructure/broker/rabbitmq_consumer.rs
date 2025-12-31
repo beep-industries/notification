@@ -1,16 +1,20 @@
-use std::sync::{
-    Arc,
-    atomic::{AtomicBool, Ordering},
+use std::{
+    collections::HashMap,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
 };
+use tokio::time::Duration;
 
 use futures_util::StreamExt;
 use lapin::{
-    Connection,
+    Connection, Consumer,
     message::Delivery,
     options::{BasicAckOptions, BasicConsumeOptions, BasicNackOptions},
     types::FieldTable,
 };
-use tokio::sync::Mutex;
+use tokio::time::sleep;
 use tracing::{error, info};
 
 use crate::domain::{
@@ -60,9 +64,8 @@ impl MessageAcknowledger for RabbitMQAcknowledger {
 
 #[derive(Clone)]
 pub struct RabbitMQMessageConsumer {
-    connection: Arc<Connection>,
     cancelled: Arc<AtomicBool>,
-    consumers: Arc<Mutex<std::collections::HashMap<String, lapin::Consumer>>>,
+    consumers: Arc<HashMap<String, Consumer>>,
 }
 
 impl RabbitMQMessageConsumer {
@@ -70,22 +73,24 @@ impl RabbitMQMessageConsumer {
         connection: Arc<Connection>,
         config: &BrokerConfig,
     ) -> Result<Self, CoreError> {
-        let consumer = Self {
-            connection,
-            cancelled: Arc::new(AtomicBool::new(false)),
-            consumers: Arc::new(Mutex::new(std::collections::HashMap::new())),
-        };
+        let mut consumers = HashMap::new();
 
-        // Setup exchanges and queues
         for binding in &config.broker_bindings {
-            consumer.setup_binding(binding).await?;
+            Self::setup_binding(&connection, binding).await?;
+            Self::setup_consumer(&connection, &mut consumers, binding).await?;
         }
 
-        Ok(consumer)
+        Ok(Self {
+            cancelled: Arc::new(AtomicBool::new(false)),
+            consumers: Arc::new(consumers),
+        })
     }
 
-    async fn setup_binding(&self, binding: &QueueBinding) -> Result<(), CoreError> {
-        let channel = self.connection.create_channel().await.map_err(|e| {
+    async fn setup_binding(
+        connection: &Connection,
+        binding: &QueueBinding,
+    ) -> Result<(), CoreError> {
+        let channel = connection.create_channel().await.map_err(|e| {
             error!("Could not create channel: {}", e);
             CoreError::FailedCreateChannel {
                 message: e.to_string(),
@@ -151,16 +156,16 @@ impl RabbitMQMessageConsumer {
         Ok(())
     }
 
-    // Ensure consumer exists for the given queue
-    // If not, it creates one and stores it in the consumers map
-    async fn get_or_create_consumer(&self, queue_name: &str) -> Result<(), CoreError> {
-        let mut consumers = self.consumers.lock().await;
+    pub fn cancel(&self) {
+        self.cancelled.store(true, Ordering::SeqCst);
+    }
 
-        if consumers.contains_key(queue_name) {
-            return Ok(());
-        }
-
-        let channel = self.connection.create_channel().await.map_err(|e| {
+    async fn setup_consumer(
+        connection: &Connection,
+        consumers: &mut HashMap<String, Consumer>,
+        binding: &QueueBinding,
+    ) -> Result<(), CoreError> {
+        let channel = connection.create_channel().await.map_err(|e| {
             error!("Could not create channel: {}", e);
             CoreError::FailedCreateChannel {
                 message: e.to_string(),
@@ -169,8 +174,8 @@ impl RabbitMQMessageConsumer {
 
         let consumer = channel
             .basic_consume(
-                queue_name,
-                &format!("{}-consumer", queue_name),
+                &binding.queue_name,
+                &format!("{}-consumer", binding.queue_name),
                 BasicConsumeOptions::default(),
                 FieldTable::default(),
             )
@@ -182,14 +187,9 @@ impl RabbitMQMessageConsumer {
                 }
             })?;
 
-        consumers.insert(queue_name.to_string(), consumer);
-        info!("Created consumer for queue: {}", queue_name);
-
+        info!("Created consumer for queue: {}", binding.queue_name);
+        consumers.insert(binding.queue_name.clone(), consumer);
         Ok(())
-    }
-
-    pub fn cancel(&self) {
-        self.cancelled.store(true, Ordering::SeqCst);
     }
 }
 
@@ -204,22 +204,14 @@ impl MessageConsumer for RabbitMQMessageConsumer {
             return Ok(None);
         }
 
-        // Ensure consumer exists
-        self.get_or_create_consumer(queue_name).await?;
-
-        let mut consumers = self.consumers.lock().await;
-        let consumer =
-            consumers
-                .get_mut(queue_name)
-                .ok_or_else(|| CoreError::FailedCreateConsumer {
-                    message: format!("Consumer not found for queue: {}", queue_name),
-                })?;
-
-        // Try to get next message with a small timeout
-        let delivery_future = consumer.next();
+        let mut consumer = self.consumers.get(queue_name).cloned().ok_or_else(|| {
+            CoreError::FailedCreateConsumer {
+                message: format!("Consumer not found for queue: {}", queue_name),
+            }
+        })?;
 
         tokio::select! {
-            delivery = delivery_future => {
+            delivery = consumer.next() => {
                 match delivery {
                     Some(Ok(delivery)) => {
                         let message = ConsumedMessage {
@@ -238,7 +230,7 @@ impl MessageConsumer for RabbitMQMessageConsumer {
                     None => Ok(None),
                 }
             }
-            _ = tokio::time::sleep(tokio::time::Duration::from_millis(100)) => {
+            _ = sleep(Duration::from_millis(100)) => {
                 Ok(None)
             }
         }

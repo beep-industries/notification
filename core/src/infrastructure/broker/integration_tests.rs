@@ -830,3 +830,128 @@ async fn test_rabbitmq_consumer_handles_message_with_attachments() {
         task_result
     );
 }
+
+#[tokio::test]
+async fn test_concurrent_consumption_from_multiple_queues() {
+    let (_container, url) = start_rabbitmq().await;
+
+    // 3 queues to test concurrence
+    let bindings = vec![
+        QueueBinding {
+            exchange_name: "message_created_1".to_string(),
+            queue_name: "message.created.queue.concurrent1".to_string(),
+        },
+        QueueBinding {
+            exchange_name: "message_created_2".to_string(),
+            queue_name: "message.created.queue.concurrent2".to_string(),
+        },
+        QueueBinding {
+            exchange_name: "message_created_3".to_string(),
+            queue_name: "message.created.queue.concurrent3".to_string(),
+        },
+    ];
+
+    let (consumer, connection) = setup_consumer_with_config(&url, bindings).await;
+
+    let queue1_done = Arc::new(Notify::new());
+    let queue2_done = Arc::new(Notify::new());
+    let queue3_done = Arc::new(Notify::new());
+
+    let queue1_notify = Arc::clone(&queue1_done);
+    let queue2_notify = Arc::clone(&queue2_done);
+    let queue3_notify = Arc::clone(&queue3_done);
+
+    let mut mock_repo = MockNotificationRepository::new();
+
+    // Each message takes 100ms to process
+    // If sequential: 3 x 100ms = 300ms minimum
+    // If concurrent: ~100ms (all 3 run in parallel)
+    const SIMULATED_PROCESSING_TIME: Duration = Duration::from_millis(100);
+
+    mock_repo
+        .expect_insert_message_notification()
+        .times(3)
+        .returning(move |input: InsertNotificationInput| {
+            let notify = if input.message == "message1" {
+                Arc::clone(&queue1_notify)
+            } else if input.message == "message2" {
+                Arc::clone(&queue2_notify)
+            } else {
+                Arc::clone(&queue3_notify)
+            };
+
+            Box::pin(async move {
+                // Simulate slow db call
+                sleep(SIMULATED_PROCESSING_TIME).await;
+                notify.notify_one();
+                Ok(dummy_notification())
+            })
+        });
+
+    let handler = NotificationMessageHandler::new(mock_repo);
+    let service = MessageConsumerService::new(
+        consumer.clone(),
+        handler,
+        vec![
+            "message.created.queue.concurrent1".to_string(),
+            "message.created.queue.concurrent2".to_string(),
+            "message.created.queue.concurrent3".to_string(),
+        ],
+    );
+
+    let handle = tokio::spawn(async move { service.start_consumers().await });
+    sleep(Duration::from_millis(100)).await;
+
+    let test_user_id = generate_id();
+    let test_channel_id = generate_id();
+
+    let make_event = |content: &str| CreateMessageEvent {
+        message_id: generate_id().to_string(),
+        author_id: test_user_id.to_string(),
+        channel_id: test_channel_id.to_string(),
+        content: content.to_string(),
+        reply_to_message_id: None,
+        attachments: vec![],
+        notify_entries: vec![NotifyEntry {
+            r#type: "user".to_string(),
+            id: test_user_id.to_string(),
+        }],
+    };
+
+    // Publish all messages concurrently
+    let payload1 = serde_json::to_vec(&make_event("message1")).unwrap();
+    let payload2 = serde_json::to_vec(&make_event("message2")).unwrap();
+    let payload3 = serde_json::to_vec(&make_event("message3")).unwrap();
+
+    tokio::try_join!(
+        publish_message(&connection, "message_created_1", &payload1),
+        publish_message(&connection, "message_created_2", &payload2),
+        publish_message(&connection, "message_created_3", &payload3),
+    )
+    .expect("Failed to publish messages");
+
+    // Start timing after publish to measure only processing time
+    let start_time = std::time::Instant::now();
+
+    // Wait for all 3 queues to be processed concurrently
+    let (r1, r2, r3) = tokio::join!(
+        timeout(Duration::from_secs(5), queue1_done.notified()),
+        timeout(Duration::from_secs(5), queue2_done.notified()),
+        timeout(Duration::from_secs(5), queue3_done.notified())
+    );
+
+    let elapsed = start_time.elapsed();
+
+    assert!(r1.is_ok(), "Queue 1 processing timed out");
+    assert!(r2.is_ok(), "Queue 2 processing timed out");
+    assert!(r3.is_ok(), "Queue 3 processing timed out");
+    assert!(
+        elapsed < Duration::from_millis(200),
+        "Processing took {:?}ms, expected < 200ms. If > 300ms, consumers are sequential and not concurrent",
+        elapsed.as_millis()
+    );
+
+    consumer.cancel();
+    let shutdown_result = timeout(Duration::from_secs(2), handle).await;
+    assert!(shutdown_result.is_ok(), "Consumer shutdown timed out");
+}

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tokio::time::sleep;
+use tokio::{spawn, time::sleep};
 use tracing::{error, info};
 
 use crate::domain::{
@@ -13,8 +13,8 @@ use crate::domain::{
 };
 
 pub struct MessageConsumerService<C, H> {
-    consumer: Arc<C>,
-    handler: Arc<H>,
+    message_consumer: Arc<C>,
+    message_handler: Arc<H>,
     queue_names: Vec<String>,
 }
 
@@ -23,33 +23,33 @@ where
     C: MessageConsumer + 'static,
     H: MessageHandler + 'static,
 {
-    pub fn new(consumer: C, handler: H, queue_names: Vec<String>) -> Self {
+    pub fn new(message_consumer: C, message_handler: H, queue_names: Vec<String>) -> Self {
         Self {
-            consumer: Arc::new(consumer),
-            handler: Arc::new(handler),
+            message_consumer: Arc::new(message_consumer),
+            message_handler: Arc::new(message_handler),
             queue_names,
         }
     }
 
     // Process messages from a single queue until cancelled or error
     async fn consume_queue(
-        consumer: Arc<C>,
-        handler: Arc<H>,
+        message_consumer: Arc<C>,
+        message_handler: Arc<H>,
         queue_name: String,
     ) -> Result<(), CoreError> {
         info!("Starting consumer for queue: {}", queue_name);
 
         loop {
-            if consumer.is_cancelled() {
+            if message_consumer.is_cancelled() {
                 info!("Consumer for queue {} received cancellation", queue_name);
                 return Ok(());
             }
 
-            match consumer.consume_one(&queue_name).await? {
+            match message_consumer.consume_one(&queue_name).await? {
                 Some(result) => {
                     let message_type = MessageType::from_queue_name(&result.message.queue_name);
 
-                    match handler.handle(message_type, &result.message.payload).await {
+                    match message_handler.handle(message_type, &result.message.payload).await {
                         Ok(_) => {
                             info!("Message processed successfully from queue {}", queue_name);
                             if let Err(e) = result.acknowledger.ack().await {
@@ -85,12 +85,12 @@ where
         let mut handles = Vec::new();
 
         for queue_name in &self.queue_names {
-            let consumer = Arc::clone(&self.consumer);
-            let handler = Arc::clone(&self.handler);
+            let message_consumer_service = Arc::clone(&self.message_consumer);
+            let handler = Arc::clone(&self.message_handler);
             let queue = queue_name.clone();
 
-            let handle = tokio::spawn(async move {
-                if let Err(e) = Self::consume_queue(consumer, handler, queue).await {
+            let handle = spawn(async move {
+                if let Err(e) = Self::consume_queue(message_consumer_service, handler, queue).await {
                     error!("Consumer error: {:?}", e);
                 }
             });
