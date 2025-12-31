@@ -193,7 +193,7 @@ async fn test_rabbitmq_consumer_receives_and_processes_create_message() {
     .await
     .expect("Failed to publish message");
 
-    // Wait for explicit signal that processing is complete
+    // Wait for processing before cancellation
     let wait_result = timeout(Duration::from_secs(5), processed_notify.notified()).await;
     assert!(
         wait_result.is_ok(),
@@ -445,7 +445,7 @@ async fn test_rabbitmq_consumer_handles_delete_message() {
     .await
     .expect("Failed to publish delete event");
 
-    // Wait for explicit delete processing confirmation
+    // Wait for processing before cancellation
     let wait_result = timeout(Duration::from_secs(5), delete_processed.notified()).await;
     assert!(
         wait_result.is_ok(),
@@ -629,7 +629,7 @@ async fn test_rabbitmq_consumer_handles_repository_error() {
     .await
     .expect("Failed to publish message");
 
-    // Wait for error to be processed
+    // Wait for processing before cancellation
     let wait_result = timeout(Duration::from_secs(5), error_processed.notified()).await;
     assert!(
         wait_result.is_ok(),
@@ -811,7 +811,7 @@ async fn test_rabbitmq_consumer_handles_message_with_attachments() {
     .await
     .expect("Failed to publish message with attachments");
 
-    // Wait for processing
+    // Wait for processing before cancellation
     let wait_result = timeout(Duration::from_secs(5), processed_notify.notified()).await;
     assert!(
         wait_result.is_ok(),
