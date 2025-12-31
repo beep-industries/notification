@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use beep_server::{args::log::LogArgs, get_addr, run_server};
 use clap::Parser;
-use tokio::signal::ctrl_c;
+use tokio::{signal::ctrl_c, spawn};
 use tracing::{error, info};
 
 use tracing_subscriber::EnvFilter;
@@ -41,7 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app_state = state(args.clone()).await?;
 
-    // Spawn consumers : broker_service internals are cloned here
+    // Spawn Rabbitmq consumers
     let consumers_handle = app_state.service.spawn_consumers();
 
     let router = router(app_state)?;
@@ -50,7 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .expect("failed to get socket address");
 
-    let server_handle = tokio::spawn(async move {
+    let server_handle = spawn(async move {
         run_server(addr, router).await;
     });
 

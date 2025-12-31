@@ -36,7 +36,7 @@ pub async fn create_service(config: Config) -> Result<ApplicationService, CoreEr
     let auth_repository = KeycloakAuthRepository::new(&config.auth.issuer, None);
     let notification_repository = PostgresNotificationRepository::new(postgres.get_db());
 
-    // Create RabbitMQ consumer adapter
+    // Create RabbitMQ consumer
     let rabbitmq_consumer =
         RabbitMQMessageConsumer::new(rabbit_mq.get_connection(), &config.broker).await?;
 
@@ -51,7 +51,6 @@ pub async fn create_service(config: Config) -> Result<ApplicationService, CoreEr
         .map(|b| b.queue_name.clone())
         .collect();
 
-    // Create the consumer service using the new architecture
     let broker_service =
         MessageConsumerService::new(rabbitmq_consumer, message_handler, queue_names);
 

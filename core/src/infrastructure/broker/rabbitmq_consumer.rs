@@ -20,7 +20,6 @@ use crate::domain::{
     },
 };
 
-// RabbitMQ implementation of MessageAcknowledger
 pub struct RabbitMQAcknowledger {
     delivery: Delivery,
 }
@@ -219,7 +218,6 @@ impl MessageConsumer for RabbitMQMessageConsumer {
         // Try to get next message with a small timeout
         let delivery_future = consumer.next();
 
-        // Use tokio select to check cancellation
         tokio::select! {
             delivery = delivery_future => {
                 match delivery {
