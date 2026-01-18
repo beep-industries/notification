@@ -27,7 +27,7 @@ The service follows Clean Architecture principles with the following layers:
 ### 1. Start Dependencies
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 This starts:
