@@ -1,0 +1,225 @@
+openapi: 3.0.0
+info:
+  title: Beep Notification Service
+  version: 1.2.0
+
+tags:
+  - name: Notifications
+    description: User notifications operations
+  - name: Preferences
+    description: User notification preference management
+security:
+  - BearerAuth: []
+
+paths:
+  /users/{userId}/notifications:
+    get:
+      tags:
+        - Notifications
+      summary: Get notifications for a user
+      description: Retrieve a paginated list of notifications for a specific user.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: unread
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filter only unread notifications.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Maximum number of notifications to return.
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Cursor for pagination.
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+                  cursor:
+                    type: string
+                    nullable: true
+                  has_more:
+                    type: boolean
+
+  /users/{userId}/notifications/{notificationId}:
+    patch:
+      tags:
+        - Notifications
+      summary: Mark a notification as read or unread
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                read:
+                  type: boolean
+      responses:
+        '200':
+          description: Notification updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+
+  /users/{userId}/notifications/read:
+    post:
+      tags:
+        - Notifications
+      summary: Mark multiple notifications as read
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Notifications marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated:
+                    type: integer
+
+  /users/{userId}/notifications/preferences:
+    get:
+      tags:
+        - Preferences
+      summary: Get a user's notification preferences
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreferences'
+
+    patch:
+      tags:
+        - Preferences
+      summary: Update a user's notification preferences
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferences'
+      responses:
+        '200':
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreferences'
+
+components:
+  schemas:
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          example: MESSAGE
+        title:
+          type: string
+          example: Nouveau message
+        content:
+          type: string
+        context:
+          type: object
+          example:
+            guild_id: "789"
+            channel_id: "456"
+            message_id: "msg_9988"
+        read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    NotificationPreferences:
+      type: object
+      description: User notification preference settings.
+      properties:
+        receive_notifications:
+          type: boolean
+          example: true
+        types_enabled:
+          type: object
+          description: Enable/disable notifications by type.
+          example:
+            MESSAGE: true
+            FRIEND_REQUEST: true
+            SYSTEM: false
+        push_enabled:
+          type: boolean
+          example: true
+        email_enabled:
+          type: boolean
+          example: false
+          
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
