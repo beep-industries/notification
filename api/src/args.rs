@@ -61,7 +61,7 @@ pub struct RabbitMQArgs {
         env = "RABBITMQ_BINDINGS",
         value_delimiter = ',',
         value_parser = parse_binding,
-        default_value = "notifications.created.queue:message_created,notifications.updated.queue:message_updated,notifications.deleted.queue:message_deleted"
+        default_value = "message.created.queue:message_created,message.updated.queue:message_updated,message.deleted.queue:message_deleted,friend_request.created.queue:friend_request_created,friend_request.accepted.queue:friend_request_accepted,friend_request.declined.queue:friend_request_declined"
     )]
     pub rabbitmq_bindings: Vec<QueueBinding>,
 }

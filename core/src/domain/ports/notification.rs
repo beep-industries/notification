@@ -37,6 +37,7 @@ pub trait NotificationService: Send + Sync {
     ) -> impl Future<Output = Result<(), CoreError>> + Send;
 }
 
+#[cfg_attr(test, mockall::automock)]
 pub trait NotificationRepository: Send + Sync {
     fn insert(
         &self,
@@ -61,6 +62,11 @@ pub trait NotificationRepository: Send + Sync {
     fn delete_message_notification(
         &self,
         message_id: NotificationId,
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
+
+    fn delete_friend_request_notification(
+        &self,
+        friend_request_id: NotificationId,
     ) -> impl Future<Output = Result<(), CoreError>> + Send;
 
     fn delete(

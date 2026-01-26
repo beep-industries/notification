@@ -7,7 +7,7 @@ use crate::domain::{
     generate_id,
 };
 
-#[derive(Debug, Clone, Serialize, PartialEq, Validate, Deserialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Deserialize, Validate)]
 #[allow(unused)]
 pub struct NotificationPreference {
     pub id: NotificationId,

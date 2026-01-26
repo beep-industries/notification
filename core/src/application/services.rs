@@ -1,20 +1,31 @@
+use std::sync::Arc;
+
 use beep_auth::{
     domain::{models::Identity, ports::HasAuthRepository},
     infrastructure::keycloak_repository::KeycloakAuthRepository,
 };
+use tokio::{spawn, task::JoinHandle};
 
 use crate::{
     domain::{
         CoreError,
         entities::{notification::Notification, preference::NotificationPreference},
         ports::{broker::BrokerService, notification::NotificationService},
-        services::{broker::BrokerServiceImpl, notification::NotificationServiceImpl},
+        services::{
+            consumer::MessageConsumerService, message_handler::NotificationMessageHandler,
+            notification::NotificationServiceImpl,
+        },
     },
-    infrastructure::repositories::notification::PostgresNotificationRepository,
+    infrastructure::{
+        broker::rabbitmq_consumer::RabbitMQMessageConsumer,
+        repositories::notification::PostgresNotificationRepository,
+    },
 };
 
 type AuthRepo = KeycloakAuthRepository;
 type NotifRepo = PostgresNotificationRepository;
+type BrokerSvc =
+    MessageConsumerService<RabbitMQMessageConsumer, NotificationMessageHandler<NotifRepo>>;
 
 impl HasAuthRepository for ApplicationService {
     type AuthRepo = KeycloakAuthRepository;
@@ -27,7 +38,7 @@ impl HasAuthRepository for ApplicationService {
 pub struct ApplicationService {
     pub auth_repository: AuthRepo,
     pub notification_service: NotificationServiceImpl<NotifRepo>,
-    pub broker_service: BrokerServiceImpl<NotifRepo>,
+    pub broker_service: Arc<BrokerSvc>,
 }
 
 impl NotificationService for ApplicationService {
@@ -71,5 +82,12 @@ impl NotificationService for ApplicationService {
 impl BrokerService for ApplicationService {
     fn start_consumers(&self) -> impl Future<Output = Result<(), CoreError>> {
         self.broker_service.start_consumers()
+    }
+}
+
+impl ApplicationService {
+    pub fn spawn_consumers(&self) -> JoinHandle<Result<(), CoreError>> {
+        let broker = Arc::clone(&self.broker_service);
+        spawn(async move { broker.start_consumers().await })
     }
 }

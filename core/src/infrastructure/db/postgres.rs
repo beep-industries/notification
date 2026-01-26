@@ -13,11 +13,14 @@ pub struct PostgresConfig {
 impl Postgres {
     pub async fn new(config: PostgresConfig) -> Result<Self, CoreError> {
         let database_url = config.database_url.clone();
-        
-        let pool = PgPool::connect(&database_url)
-            .await
-            .map_err(|_| CoreError::ServiceUnavailable { service: "Postgres".into() })?;
-        
+
+        let pool =
+            PgPool::connect(&database_url)
+                .await
+                .map_err(|_| CoreError::ServiceUnavailable {
+                    service: "Postgres".into(),
+                })?;
+
         Ok(Self { pool })
     }
 

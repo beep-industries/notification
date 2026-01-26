@@ -1,13 +1,9 @@
-use core::{
-    application::http::error::ApiError,
-};
+use core::application::http::error::ApiError;
 
-use axum::{
-    Extension,
-};
+use axum::Extension;
 use beep_auth::domain::models::Identity;
 use beep_server::http::response::Response;
-use serde::{Serialize};
+use serde::Serialize;
 
 pub mod notification;
 

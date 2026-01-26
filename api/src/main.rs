@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use beep_server::{args::log::LogArgs, get_addr, run_server};
 use clap::Parser;
-use core::domain::ports::broker::BrokerService;
 use tokio::{signal::ctrl_c, spawn};
 use tracing::{error, info};
 
@@ -40,15 +39,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Arc::new(Args::parse());
     init_logger(&args.log);
 
-    let app_state = Arc::new(state(args.clone()).await?);
+    let app_state = state(args.clone()).await?;
 
-    let app_state_consumers = app_state.clone();
-    let consumers_handle =
-        spawn(async move { app_state_consumers.service.start_consumers().await });
+    // Spawn Rabbitmq consumers
+    let consumers_handle = app_state.service.spawn_consumers();
 
-    let app_state_for_router = (*app_state).clone();
-
-    let router = router(app_state_for_router)?;
+    let router = router(app_state)?;
 
     let addr = get_addr(&args.server.host, args.server.port)
         .await
