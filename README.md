@@ -329,3 +329,11 @@ Main tables:
 2. Ensure all tests pass: `cargo test`
 3. Add tests for new functionality
 4. Update this README if adding new features
+
+## Project Governance
+
+[License](https://github.com/beep-industries/.github/blob/main/LICENSE)
+
+[Contributing Guide](https://github.com/beep-industries/.github/blob/main/CONTRIBUTING.md)
+
+[Code of Conduct](https://github.com/beep-industries/.github/blob/main/CODE_OF_CONDUCT.md)
